@@ -2,9 +2,15 @@ from django.db import models
 from accounts.models import User
 
 # Create your models here.
+# author/{codesets multiple}
+# books - edit functionality are not working properly and add functionality is not working
+class CodeSet(models.Model):
+    code = models.CharField(max_length=255)
 class Books(models.Model):
     name = models.CharField(max_length=255)
     version = models.CharField(max_length=50)
+    author = models.CharField(max_length=255, null=True, blank=True)  # New author field
+    codesets = models.ManyToManyField(CodeSet, blank=True)  # Many-to-Many field
     created_by = models.ForeignKey(User, related_name='books_created', on_delete=models.SET_NULL, null=True)
     updated_by = models.ForeignKey(User, related_name='books_updated', on_delete=models.SET_NULL, null=True)
     updated_at = models.DateTimeField(auto_now=True)  # Auto-updates on modification
