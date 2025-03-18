@@ -205,7 +205,7 @@ class BookDetailsAPIView(APIView):
                     description=description, code=sub_code, sub_description=sub_description_text, created_by=user, updated_by=user
                 )
 
-        return Response({"message": "Description and sub-descriptions updated successfully"}, status=status.HTTP_200_OK)
+        return Response({"description":description_text,"sub_description":sub_desc,"message": "Description and sub-descriptions updated successfully"}, status=status.HTTP_200_OK)
 
     
     def delete(self, request, code_id):
