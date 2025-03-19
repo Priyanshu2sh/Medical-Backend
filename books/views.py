@@ -13,10 +13,19 @@ class BooksAPIView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     def post(self, request):
-        user = request.user  # Get the authenticated user
+        user = request.user  
         data = request.data
-        data['created_by'] = user.id  # Assign creator
+        print("user",user)
+
+        # code_sets_data = data.pop('code_sets', []) 
+        
+        data['created_by'] = user.id 
         data['updated_by'] = user.id
+
+         # Ensure 'code_sets' is a list of dictionaries
+        if not isinstance(data.get('code_sets', []), list):
+            return Response({"error": "code_sets must be a list"}, status=status.HTTP_400_BAD_REQUEST)
+
 
         serializer = BooksSerializer(data=data)
         if serializer.is_valid():
@@ -31,18 +40,31 @@ class BooksAPIView(APIView):
             return Response({"error": "Book not found"}, status=status.HTTP_404_NOT_FOUND)
 
         user = request.user
-        previous_data = {"name": book.name, "version": book.version}
+        previous_data = {
+            "name": book.name,
+            "author": book.author,  # Track previous author value
+            "code_sets": book.code_sets ,
+            "version": book.version
+            }
+        data = request.data.copy()
+        if "codeSets" in data:
+            data["code_sets"] = data.pop("codeSets")
+
+        # Ensure `code_sets` is correctly formatted
+        if "code_sets" in data and isinstance(data["code_sets"], list):
+            formatted_code_sets = [{"name": item.get("name")} for item in data["code_sets"]]
+            data["code_sets"] = formatted_code_sets
 
         serializer = BooksSerializer(book, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save(updated_by=user)
+            serializer.save()
 
             # Store history
             History.objects.create(
                 model_name="Books",
                 record_id=book.id,
-                changes=previous_data,
-                updated_by=user
+                changes=previous_data
+                # updated_by=user
             )
 
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -109,7 +131,6 @@ class BookDetailsAPIView(APIView):
         return Response(books_data, status=status.HTTP_200_OK)
 
 
-        
     def post(self, request):
         user_id = request.data.get("user_id")
         book_id = request.data.get("book")
@@ -149,22 +170,41 @@ class BookDetailsAPIView(APIView):
 
         try:
             description = Descriptions.objects.get(id=description_id)
+            print("description",description)
         except Descriptions.DoesNotExist:
             return Response({"error": "Description not found"}, status=status.HTTP_404_NOT_FOUND)
 
         user = request.data.get("user_id")
+        book_id = request.data.get("book")
 
         try:
             user = User.objects.get(id=user)
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-        previous_data = {"code": description.code, "description": description.description}
+        
+        # If book is provided, update it
+        if book_id:
+            try:
+                book = Books.objects.get(id=book_id)
+                description.book = book  # Update book field
+            except Books.DoesNotExist:
+                return Response({"error": "Book not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+        previous_data = {
+        "book": description.book.id if description.book else None,
+        "code": description.code,
+        "description": description.description
+    }
 
         description_text = request.data.get("description")
+        code = request.data.get("code")
         if description_text:
             description.description = description_text
-            description.updated_by = user
-            description.save()
+        if code:
+            description.code = code  
+
+        description.updated_by = user
+        description.save()
 
         # Store history
         History.objects.create(
@@ -205,7 +245,10 @@ class BookDetailsAPIView(APIView):
                     description=description, code=sub_code, sub_description=sub_description_text, created_by=user, updated_by=user
                 )
 
-        return Response({"description":description_text,"sub_description":sub_desc,"message": "Description and sub-descriptions updated successfully"}, status=status.HTTP_200_OK)
+        return Response({ "book": description.book.id if description.book else None,
+        "code": description.code,
+        "description": description.description,
+        "sub_descriptions": sub_descriptions_data,"message": "Description and sub-descriptions updated successfully"}, status=status.HTTP_200_OK)
 
     
     def delete(self, request, code_id):

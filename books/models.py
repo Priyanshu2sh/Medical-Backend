@@ -4,13 +4,16 @@ from accounts.models import User
 # Create your models here.
 # author/{codesets multiple}
 # books - edit functionality are not working properly and add functionality is not working
-class CodeSet(models.Model):
-    code_name = models.CharField(max_length=255)
+# class CodeSet(models.Model):
+#     code_name = models.CharField(max_length=255, unique=True)
+#     def __str__(self):
+#         return self.code_name
+
 class Books(models.Model):
     name = models.CharField(max_length=255)
     version = models.CharField(max_length=50)
     author = models.CharField(max_length=255, null=True)  # New author field
-    code_sets = models.ManyToManyField(CodeSet, blank=True)  # Many-to-Many field
+    code_sets = models.JSONField(default=list)  # Stores array of strings
     created_by = models.ForeignKey(User, related_name='books_created', on_delete=models.SET_NULL, null=True)
     updated_by = models.ForeignKey(User, related_name='books_updated', on_delete=models.SET_NULL, null=True)
     updated_at = models.DateTimeField(auto_now=True)  # Auto-updates on modification

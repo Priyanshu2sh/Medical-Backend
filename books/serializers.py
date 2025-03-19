@@ -10,3 +10,4 @@ class DescriptionsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Descriptions
         fields = '__all__'
+        
