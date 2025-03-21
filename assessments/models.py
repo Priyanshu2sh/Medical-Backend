@@ -27,3 +27,14 @@ class CommonTest(models.Model):
 
     def __str__(self):
         return self.user
+
+class StatementOption(models.Model):
+    logical = models.CharField(max_length=255)
+    analytical = models.CharField(max_length=255)
+    strategic = models.CharField(max_length=255)
+    thinking = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"Logical: {self.logical}, Analytical: {self.analytical}, Strategic: {self.strategic}, Thinking: {self.thinking}"
+
+        

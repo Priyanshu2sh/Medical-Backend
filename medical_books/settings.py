@@ -146,3 +146,14 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'prushaltech@gmail.com'
 EMAIL_HOST_PASSWORD = 'gufirwicaactesmp'
 DEFAULT_FROM_EMAIL = 'prushaltech@gmail.com'
+
+# REST_FRAMEWORK = {
+#     'DEFAULT_AUTHENTICATION_CLASSES': (
+#         'rest_framework.authentication.SessionAuthentication',  # For session-based auth
+#         'rest_framework.authentication.TokenAuthentication',  # For token-based auth
+#         'rest_framework.authentication.BasicAuthentication',  # Optional
+#     ),
+#     'DEFAULT_PERMISSION_CLASSES': (
+#         'rest_framework.permissions.IsAuthenticated',  # Ensures only authenticated users can access APIs
+#     ),
+# }

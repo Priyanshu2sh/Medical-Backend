@@ -1,21 +1,27 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-
+# from rest_framework.permissions import IsAuthenticated
 from accounts.models import User
 from .models import Books, Descriptions, History, SubDescriptions
 from .serializers import BooksSerializer, DescriptionsSerializer
 
 class BooksAPIView(APIView):
+    # permission_classes = [IsAuthenticated] 
     def get(self, request):
         books = Books.objects.all()
         serializer = BooksSerializer(books, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     def post(self, request):
+        # if request.user.is_anonymous:
+        #     return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
+        
         user = request.user  
         data = request.data
-        print("user",user)
+        print("Request Data:", request.data)
+        print("User:", user)
+
 
         # code_sets_data = data.pop('code_sets', []) 
         

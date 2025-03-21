@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CommonQuestion, CommonTest
+from .models import CommonQuestion, CommonTest, StatementOption
 
 class CommonQuestionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -16,3 +16,8 @@ class UserResponseSerializer(serializers.Serializer):
     responses = serializers.ListField(
         child=serializers.DictField()  # Each response contains question_id and selected_option
     )
+
+class StatementOptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StatementOption
+        fields = '__all__'

@@ -3,8 +3,8 @@ from rest_framework import status
 from accounts.models import User
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import CommonQuestion, CommonTest
-from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer
+from .models import CommonQuestion, CommonTest, StatementOption
+from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer, StatementOptionSerializer
 
     
 class CommonQuestionListView(APIView):
@@ -63,3 +63,23 @@ class ComputeTestResultView(APIView):
             return Response({"message": "Test results saved successfully", "data": serializer.data}, status=status.HTTP_201_CREATED)
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+
+class StatementOptionView(APIView):
+    def post(self, request):
+        serializer = StatementOptionSerializer(data=request.data, many=isinstance(request.data, list))
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Statement options added successfully",
+                "data": serializer.data
+                }, 
+                status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request):
+        options = StatementOption.objects.all()
+        serializer = StatementOptionSerializer(options, many=True)
+        return Response({"options": serializer.data})
+    
