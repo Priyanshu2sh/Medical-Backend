@@ -1,69 +1,65 @@
-import logging
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-import json
-from .models import MCQ
+from django.shortcuts import render
+from rest_framework import status
+from accounts.models import User
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import CommonQuestion, CommonTest
+from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer
+
+    
+class CommonQuestionListView(APIView):
+    def post(self, request):
+        serializer = CommonQuestionSerializer(data=request.data, many=True)  # Allows multiple questions at once
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Questions added successfully",
+                "data": serializer.data
+                }, 
+                status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+    def get(self, request):
+        questions = CommonQuestion.objects.all()
+        serializer = CommonQuestionSerializer(questions, many=True)
+        return Response({"questions": serializer.data})
+        # Create your views here.
 
 
-logger = logging.getLogger(__name__)
+class ComputeTestResultView(APIView):
+    def post(self, request):
+        user_id = request.data.get("user_id")  # Get user ID from request
+        selected_categories = request.data.get("responses")  # Array of category selections
 
-@csrf_exempt
-def check_answers(request):
-    """Check answers for multiple MCQs and return the final result"""
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)  # Parse JSON request
-            selected_answers = data.get('answers', {})  # Get selected answers from frontend
+        if not user_id or not selected_categories:
+            return Response({"error": "User ID and responses are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-            correct_answers_count = 0  # Track correct answers
-            total_questions = len(selected_answers)  # Total submitted questions
-
-            # Check each answer
-            for mcq_id, selected_answer in selected_answers.items():
-                try:
-                    question = MCQ.objects.get(id=mcq_id)
-                    if question.correct_answer == selected_answer:
-                        correct_answers_count += 1  # Increase score if correct
-                except MCQ.DoesNotExist:
-                    logger.warning(f"Question ID {mcq_id} not found.")
-
-            # Return result summary
-            return JsonResponse({
-                "total_questions": total_questions,
-                "correct_answers": correct_answers_count,
-                "score": f"{correct_answers_count}/{total_questions}"
-            })
-
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-
-            
-def get_mcq_questions(request):
-    """API to get 40 random MCQ questions"""
-    questions = MCQ.get_random_questions()
-    logger.info(f"Fetched {len(questions)} random MCQs")
-
-    data = [
-        {
-            "id": q.id,
-            "question": q.question,
-            "options": [q.option1, q.option2, q.option3, q.option4],
+        # Count responses
+        category_counts = {
+            "logical": selected_categories.count("logical"),
+            "analytical": selected_categories.count("analytical"),
+            "strategic": selected_categories.count("strategic"),
+            "thinking": selected_categories.count("thinking"),
+            "skip": selected_categories.count(""),
+            "total": len(selected_categories)
         }
-        for q in questions
-    ]
-    return JsonResponse({"questions": data})
 
-
-# def check_answer(request, mcq_id):
-#     """Check if the selected answer is correct"""
-#     if request.method == 'POST':
-#         selected_answer = request.POST.get('selected_answer')
-#         try:
-#             question = MCQ.objects.get(id=mcq_id)
-#             is_correct = question.correct_answer == selected_answer
-#             return JsonResponse({"correct": is_correct})
-#         except MCQ.DoesNotExist:
-#             return JsonResponse({"error": "Question not found"}, status=404)
-
-
-
+        # Save to CommonTest model
+        try:
+            user = User.objects.get(id=user_id)  # Fetch the user instance
+            test_instance = CommonTest.objects.create(
+                user_id=user,
+                logical=category_counts["logical"],
+                analytical=category_counts["analytical"],
+                strategic=category_counts["strategic"],
+                thinking=category_counts["thinking"],
+                skip=category_counts["skip"],
+                total=category_counts["total"]
+            )
+            serializer = CommonTestSerializer(test_instance)
+            return Response({"message": "Test results saved successfully", "data": serializer.data}, status=status.HTTP_201_CREATED)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)

@@ -1,23 +1,29 @@
 from django.db import models
-import random
-# from django.db.models.functions import Random
+from accounts.models import User    
 
-class MCQ(models.Model):
+class CommonQuestion(models.Model):
+    # id = models.AutoField(primary_key=True)
     question = models.TextField()
-    option1 = models.CharField(max_length=255)
-    option2 = models.CharField(max_length=255)
-    option3 = models.CharField(max_length=255)
-    option4 = models.CharField(max_length=255)
-    correct_answer = models.CharField(max_length=255)
+
+    logical = models.CharField(max_length=255)
+    analytical = models.CharField(max_length=255)
+    strategic = models.CharField(max_length=255)
+    thinking = models.CharField(max_length=255)
 
     def __str__(self):
         return self.question
 
-    # import random
+class CommonTest(models.Model):
+    # id = models.AutoField(primary_key=True)
+    logical = models.IntegerField()
+    analytical = models.IntegerField()
+    strategic = models.IntegerField()
+    thinking = models.IntegerField()
+    skip = models.IntegerField()
+    total = models.IntegerField()   
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)  # Stores creation timestamp
+    updated_at = models.DateTimeField(auto_now=True) 
 
-    @classmethod
-    def get_random_questions(cls, count=40):
-        """Fetch 40 random questions"""
-        ids = list(cls.objects.values_list('id', flat=True))
-        random_ids = random.sample(ids, min(len(ids), count))
-        return cls.objects.filter(id__in=random_ids)
+    def __str__(self):
+        return self.user

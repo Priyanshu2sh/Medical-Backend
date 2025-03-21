@@ -1,21 +1,18 @@
-# from rest_framework import serializers
-# from .models import Assessment, Question, Option
+from rest_framework import serializers
+from .models import CommonQuestion, CommonTest
 
-# class OptionSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Option
-#         fields = ['id', 'text', 'is_correct']
+class CommonQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommonQuestion
+        fields = '__all__'
 
-# class QuestionSerializer(serializers.ModelSerializer):
-#     options = OptionSerializer(many=True, read_only=True)
+class CommonTestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommonTest
+        fields = '__all__'
 
-#     class Meta:
-#         model = Question
-#         fields = ['id', 'text', 'options']
-
-# class AssessmentSerializer(serializers.ModelSerializer):
-#     questions = QuestionSerializer(many=True, read_only=True)
-
-#     class Meta:
-#         model = Assessment
-#         fields = ['id', 'title', 'description', 'questions']
+class UserResponseSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    responses = serializers.ListField(
+        child=serializers.DictField()  # Each response contains question_id and selected_option
+    )

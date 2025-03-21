@@ -1,7 +1,8 @@
 from django.urls import path
-from .views import check_answers, get_mcq_questions
+from .views import CommonQuestionListView, ComputeTestResultView
 
 urlpatterns = [
-    path('mcqs/', get_mcq_questions, name='get_mcqs'),
-    path('mcqs/check/', check_answers, name='check_answers'),  # Updated to check multiple answers
+    path('question_add', CommonQuestionListView.as_view()),
+    path('questions/',CommonQuestionListView.as_view()),
+    path('submit-test/', ComputeTestResultView.as_view(), name='submit-test'),
 ]
