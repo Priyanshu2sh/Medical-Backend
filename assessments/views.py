@@ -35,9 +35,12 @@ class ComputeTestResultView(APIView):
         selected_categories = request.data.get("responses")  # Array of category selections
 
         if not user_id or not selected_categories:
-            return Response({"error": "User ID and responses are required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "User ID and responses are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # Count responses
+        # Count responses for each category
         category_counts = {
             "logical": selected_categories.count("logical"),
             "analytical": selected_categories.count("analytical"),
@@ -47,7 +50,47 @@ class ComputeTestResultView(APIView):
             "total": len(selected_categories)
         }
 
-        # Save to CommonTest model
+        total = category_counts["total"]
+        non_skip_total = total - category_counts["skip"]
+
+        if total:
+            # Calculate percentage for each category
+            logical_pct = round((category_counts["logical"] / total) * 100, 2)
+            analytical_pct = round((category_counts["analytical"] / total) * 100, 2)
+            strategic_pct = round((category_counts["strategic"] / total) * 100, 2)
+            thinking_pct = round((category_counts["thinking"] / total) * 100, 2)
+            skip_pct = round((category_counts["skip"] / total) * 100, 2)
+
+            percentages = {
+                "logical_percentage": f"{logical_pct}%",
+                "analytical_percentage": f"{analytical_pct}%",
+                "strategic_percentage": f"{strategic_pct}%",
+                "thinking_percentage": f"{thinking_pct}%",
+                "skip_percentage": f"{skip_pct}%"
+            }
+
+            # Calculate average count for non-skipped responses (across the 4 main categories)
+            average_count = round(
+                (category_counts["logical"] +
+                 category_counts["analytical"] +
+                 category_counts["strategic"] +
+                 category_counts["thinking"]) / 4, 2
+            )
+
+            # Calculate average percentage for the four main categories
+            average_percentage = round((logical_pct + analytical_pct + strategic_pct + thinking_pct) / 4, 2)
+        else:
+            percentages = {
+                "logical_percentage": "0%",
+                "analytical_percentage": "0%",
+                "strategic_percentage": "0%",
+                "thinking_percentage": "0%",
+                "skip_percentage": "0%"
+            }
+            average_count = 0
+            average_percentage = 0
+
+        # Save the computed results to CommonTest model
         try:
             user = User.objects.get(id=user_id)  # Fetch the user instance
             test_instance = CommonTest.objects.create(
@@ -60,10 +103,20 @@ class ComputeTestResultView(APIView):
                 total=category_counts["total"]
             )
             serializer = CommonTestSerializer(test_instance)
-            return Response({"message": "Test results saved successfully", "data": serializer.data}, status=status.HTTP_201_CREATED)
+            # Combine test result, percentage stats, and average values in the response
+            return Response({
+                "message": "Test results saved successfully",
+                "data": serializer.data,
+                "statistics": percentages,
+                "average_count": average_count,
+                "average_percentage": f"{average_percentage}%"
+            }, status=status.HTTP_201_CREATED)
         except User.DoesNotExist:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-        
+            return Response(
+                {"error": "User not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
 
 class StatementOptionView(APIView):
     def post(self, request):
@@ -83,3 +136,22 @@ class StatementOptionView(APIView):
         serializer = StatementOptionSerializer(options, many=True)
         return Response({"options": serializer.data})
     
+
+class TestHistoryView(APIView):
+    def get(self, request, user_id):
+        try:
+            # Fetch all test records for the given user
+            test_history = CommonTest.objects.filter(user_id=user_id).order_by("-created_at")
+            test_serializer = CommonTestSerializer(test_history, many=True)
+
+            # Fetch all statement options (if needed)
+            statement_options = StatementOption.objects.all()
+            statement_serializer = StatementOptionSerializer(statement_options, many=True)
+
+            return Response({
+                "test_history": test_serializer.data,
+                "statement_options": statement_serializer.data
+            }, status=status.HTTP_200_OK)
+
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)

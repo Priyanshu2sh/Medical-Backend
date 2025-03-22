@@ -26,7 +26,7 @@ class CommonTest(models.Model):
     updated_at = models.DateTimeField(auto_now=True) 
 
     def __str__(self):
-        return self.user
+        return str(self.user)
 
 class StatementOption(models.Model):
     logical = models.CharField(max_length=255)

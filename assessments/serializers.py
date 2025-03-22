@@ -1,23 +1,14 @@
 from rest_framework import serializers
 from .models import CommonQuestion, CommonTest, StatementOption
-# import random
+
 
 class CommonQuestionSerializer(serializers.ModelSerializer):
-    # options = serializers.SerializerMethodField()
+   
 
     class Meta:
         model = CommonQuestion
-        fields = ['id', 'question', 'options']
+        fields = '__all__'
 
-    # def get_options(self, obj):
-    #     options = [
-    #         {"category": "logical", "option": obj.logical},
-    #         {"category": "analytical", "option": obj.analytical},
-    #         {"category": "strategic", "option": obj.strategic},
-    #         {"category": "thinking", "option": obj.thinking}
-    #     ]
-    #     random.shuffle(options)
-    #     return options
 
 class CommonTestSerializer(serializers.ModelSerializer):
     class Meta:
