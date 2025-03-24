@@ -25,8 +25,8 @@ class BooksAPIView(APIView):
 
         # code_sets_data = data.pop('code_sets', []) 
         
-        data['created_by'] = user.id 
-        data['updated_by'] = user.id
+        data['created_by'] = user
+        data['updated_by'] = user
 
          # Ensure 'code_sets' is a list of dictionaries
         if not isinstance(data.get('code_sets', []), list):
