@@ -1,14 +1,10 @@
 from rest_framework import serializers
 from .models import CommonQuestion, CommonTest, StatementOption
 
-
 class CommonQuestionSerializer(serializers.ModelSerializer):
-   
-
     class Meta:
         model = CommonQuestion
         fields = '__all__'
-
 
 class CommonTestSerializer(serializers.ModelSerializer):
     class Meta:

@@ -48,13 +48,14 @@ class ComputeTestResultView(APIView):
             "thinking": selected_categories.count("thinking"),
             "skip": selected_categories.count(""),
             "total": len(selected_categories)
+            
         }
 
         total = category_counts["total"]
-        non_skip_total = total - category_counts["skip"]
+        # non_skip_total = total - category_counts["skip"]
 
         if total:
-            # Calculate percentage for each category
+            # Calculate percentage 
             logical_pct = round((category_counts["logical"] / total) * 100, 2)
             analytical_pct = round((category_counts["analytical"] / total) * 100, 2)
             strategic_pct = round((category_counts["strategic"] / total) * 100, 2)
@@ -69,7 +70,11 @@ class ComputeTestResultView(APIView):
                 "skip_percentage": f"{skip_pct}%"
             }
 
-            # Calculate average count for non-skipped responses (across the 4 main categories)
+            category_counts.pop("skip")  
+            category_counts.pop("total") 
+            maximum_category = max(category_counts, key=category_counts.get)
+
+            # Calculate average 
             average_count = round(
                 (category_counts["logical"] +
                  category_counts["analytical"] +
@@ -77,7 +82,7 @@ class ComputeTestResultView(APIView):
                  category_counts["thinking"]) / 4, 2
             )
 
-            # Calculate average percentage for the four main categories
+            # Calculate average percentage 
             average_percentage = round((logical_pct + analytical_pct + strategic_pct + thinking_pct) / 4, 2)
         else:
             percentages = {
@@ -89,27 +94,29 @@ class ComputeTestResultView(APIView):
             }
             average_count = 0
             average_percentage = 0
+            maximum_category = None
 
         # Save the computed results to CommonTest model
         try:
-            user = User.objects.get(id=user_id)  # Fetch the user instance
+            user = User.objects.get(id=user_id) 
             test_instance = CommonTest.objects.create(
                 user_id=user,
                 logical=category_counts["logical"],
                 analytical=category_counts["analytical"],
                 strategic=category_counts["strategic"],
                 thinking=category_counts["thinking"],
-                skip=category_counts["skip"],
-                total=category_counts["total"]
+                skip=request.data.get("responses").count(""),
+                total=request.data.get("responses").count(""),
+                result = maximum_category
             )
             serializer = CommonTestSerializer(test_instance)
-            # Combine test result, percentage stats, and average values in the response
+           
             return Response({
                 "message": "Test results saved successfully",
                 "data": serializer.data,
                 "statistics": percentages,
                 "average_count": average_count,
-                "average_percentage": f"{average_percentage}%"
+                "average_percentage": f"{average_percentage}%",
             }, status=status.HTTP_201_CREATED)
         except User.DoesNotExist:
             return Response(

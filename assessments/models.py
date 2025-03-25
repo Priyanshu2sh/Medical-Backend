@@ -21,6 +21,7 @@ class CommonTest(models.Model):
     thinking = models.IntegerField()
     skip = models.IntegerField()
     total = models.IntegerField()   
+    result = models.CharField(max_length=100, blank=True, null=True)   
     user_id = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)  # Stores creation timestamp
     updated_at = models.DateTimeField(auto_now=True) 
