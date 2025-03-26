@@ -14,6 +14,8 @@ class Descriptions(models.Model):
     book = models.ForeignKey(Books, related_name='descriptions', on_delete=models.CASCADE)
     code = models.CharField(max_length=50)
     description = models.TextField()
+    review = models.IntegerField(default=0)    
+    update = models.JSONField(default=dict)         #for json storing used      
     created_by = models.ForeignKey(User, related_name='descriptions_created', on_delete=models.SET_NULL, null=True)
     updated_by = models.ForeignKey(User, related_name='descriptions_updated', on_delete=models.SET_NULL, null=True)
     updated_at = models.DateTimeField(auto_now=True)
