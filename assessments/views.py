@@ -1,3 +1,4 @@
+import random
 from django.shortcuts import render
 from rest_framework import status
 from accounts.models import User
@@ -21,22 +22,59 @@ class CommonQuestionListView(APIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-
     def get(self, request):
         questions = CommonQuestion.objects.all()
-        serializer = CommonQuestionSerializer(questions, many=True)
-        return Response({"questions": serializer.data})
-        # Create your views here.
+        formatted_questions = []
+
+        for question in questions:
+            # Extract the category fields and their values
+            category_options = [
+                ("logical", question.logical),
+                ("analytical", question.analytical),
+                ("strategic", question.strategic),
+                ("thinking", question.thinking),
+            ]
+
+            # Shuffle the options
+            random.shuffle(category_options)
+
+            # Create a dictionary with shuffled options
+            shuffled_options = {key: value for key, value in category_options}
+
+            # Create response data with shuffled options
+            question_data = {
+                "id": question.id,
+                "question": question.question,
+                **shuffled_options  # Spread shuffled options into the response
+            }
+
+            formatted_questions.append(question_data)
+
+        return Response({"questions": formatted_questions}, status=status.HTTP_200_OK)
+
+    # def get(self, request):
+    #     questions = CommonQuestion.objects.all()
+    #     serializer = CommonQuestionSerializer(questions, many=True)
+    #     return Response({"questions": serializer.data})
+    #     # Create your views here.
 
 
 class ComputeTestResultView(APIView):
     def post(self, request):
         user_id = request.data.get("user_id")  # Get user ID from request
+        question_type = request.data.get("type")
         selected_categories = request.data.get("responses")  # Array of category selections
 
         if not user_id or not selected_categories:
             return Response(
                 {"error": "User ID and responses are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+         # Validate type field
+        if question_type not in ["mcq", "statement-based"]:
+            return Response(
+                {"error": "Invalid question type. Allowed types: 'mcq', 'statement-based'"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -107,12 +145,14 @@ class ComputeTestResultView(APIView):
                 thinking=category_counts["thinking"],
                 skip=request.data.get("responses").count(""),
                 total=request.data.get("responses").count(""),
-                result = maximum_category
+                result = maximum_category,
+                type=question_type
             )
             serializer = CommonTestSerializer(test_instance)
            
             return Response({
                 "message": "Test results saved successfully",
+                "type": question_type,
                 "data": serializer.data,
                 "statistics": percentages,
                 "average_count": average_count,
@@ -140,6 +180,26 @@ class StatementOptionView(APIView):
     
     def get(self, request):
         options = StatementOption.objects.all()
+        # formatted_options = []
+
+        # for option in options:
+        #     # Create a dictionary of available options
+        #     all_options = {
+        #         "logical": option.logical,
+        #         "analytical": option.analytical,
+        #         "strategic": option.strategic,
+        #         "thinking": option.thinking
+        #     }
+
+        #     # Randomly select 2 keys
+        #     selected_keys = random.sample(list(all_options.keys()), 2)
+
+        #     # Create a dictionary with only the selected keys
+        #     selected_options = {key: all_options[key] for key in selected_keys}
+
+        #     formatted_options.append(selected_options)
+
+        # return Response({"options": formatted_options}, status=status.HTTP_200_OK)
         serializer = StatementOptionSerializer(options, many=True)
         return Response({"options": serializer.data})
     

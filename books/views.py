@@ -18,16 +18,16 @@ class BooksAPIView(APIView):
         # if request.user.is_anonymous:
         #     return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
         
-        user = request.user  
+        # user = request.user  
         data = request.data
-        print("Request Data:", request.data)
-        print("User:", user)
+        # print("Request Data:", request.data)
+        # print("User:", user)
 
 
         # code_sets_data = data.pop('code_sets', []) 
         
-        data['created_by'] = user
-        data['updated_by'] = user
+        # data['created_by'] = user
+        # data['updated_by'] = user
 
          # Ensure 'code_sets' is a list of dictionaries
         if not isinstance(data.get('code_sets', []), list):
@@ -319,7 +319,7 @@ class ReviewAPIView(APIView):
         description.update = update_history 
         description.save()
 
-        if description.review > 3:
+        if description.review >= 3:
             return Response({
                 "message": "Approved",
                 "description_id": description.id,

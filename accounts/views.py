@@ -45,6 +45,7 @@ class RegisterUser(APIView):
         data = request.data
         print(data)
         email = data.get('email')
+        r_level = data.get('r_level')
 
         serializer = UserSerializer(data=data)
 
@@ -75,6 +76,7 @@ class RegisterUser(APIView):
 
             if serializer.is_valid():
                 user = serializer.save()
+                user.r_level = r_level
 
                 # Send OTP
                 email_otp = random.randint(100000, 999999)
@@ -90,7 +92,10 @@ class RegisterUser(APIView):
                     fail_silently=False,
                 )
 
-                return Response({'message': 'OTP sent to your email', 'user_id': user.id}, status=status.HTTP_200_OK)
+                return Response({'message': 'OTP sent to your email',
+                                'user_id': user.id, 
+                                "r_level":r_level}, 
+                                status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -143,6 +148,7 @@ class LoginUser(APIView):
 
         # Serialize user data using UserSerializer
         user_data = UserSerializer(user).data
+        user_data['r_level'] = user.r_level 
 
         return Response({
             'message': 'Login successful',

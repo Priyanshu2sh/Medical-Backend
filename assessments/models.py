@@ -14,6 +14,10 @@ class CommonQuestion(models.Model):
         return self.question
 
 class CommonTest(models.Model):
+    TEST_TYPES = [
+        ("mcq", "MCQ"),
+        ("statement-based", "Statement-Based"),
+    ]
     # id = models.AutoField(primary_key=True)
     logical = models.IntegerField()
     analytical = models.IntegerField()
@@ -23,6 +27,7 @@ class CommonTest(models.Model):
     total = models.IntegerField()   
     result = models.CharField(max_length=100, blank=True, null=True)   
     user_id = models.ForeignKey(User, on_delete=models.CASCADE)
+    type = models.CharField(max_length=20, choices=TEST_TYPES, default="mcq")  
     created_at = models.DateTimeField(auto_now_add=True)  # Stores creation timestamp
     updated_at = models.DateTimeField(auto_now=True) 
 
