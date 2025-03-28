@@ -12,3 +12,9 @@ class AdminBooks(admin.ModelAdmin):
 @admin.register(SubDescriptions)
 class AdminBooks(admin.ModelAdmin):
     list_display = ['id', 'description', 'code', 'sub_description']
+
+@admin.register(CodeReaction)
+class AdminCodeReaction(admin.ModelAdmin):
+    list_display = ['id', 'user', 'description', 'like', 'dislike']
+    list_filter = ['like', 'dislike']
+    search_fields = ['user__username', 'description__code']

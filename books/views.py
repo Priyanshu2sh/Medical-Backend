@@ -4,8 +4,10 @@ from rest_framework.response import Response
 from rest_framework import status
 # from rest_framework.permissions import IsAuthenticated
 from accounts.models import User
-from .models import Books, Descriptions, History, SubDescriptions
-from .serializers import BooksSerializer, DescriptionsSerializer
+from .models import Books, Descriptions, History, SubDescriptions, CodeReaction
+from .serializers import BooksSerializer, DescriptionsSerializer, CodeReactionSerializer
+from django.db.models import F
+
 
 class BooksAPIView(APIView):
     # permission_classes = [IsAuthenticated] 
@@ -93,6 +95,7 @@ class BookDetailsAPIView(APIView):
             descriptions = Descriptions.objects.filter(book=book)
 
             for description in descriptions:
+                description.refresh_from_db()       #####
                 sub_descriptions = SubDescriptions.objects.filter(description=description)
 
                 # Fetching sub-description history
@@ -133,8 +136,8 @@ class BookDetailsAPIView(APIView):
                     "description": description.description,
                     "sub_descriptions": sub_descriptions_data,
                     "history": desc_history_data,  # Include description history
-                    # "review": description.review, 
-                    "review": description.update 
+                    "like_count": description.like_count,  # Added like count
+                    "dislike_count": description.dislike_count,  # Added dislike count
                 })
 
         return Response(books_data, status=status.HTTP_200_OK)
@@ -282,57 +285,55 @@ class HistoryAPIView(APIView):
         ]
         return Response(history_data, status=status.HTTP_200_OK)
 
-class ReviewAPIView(APIView):
+class CodeReactionAPIView(APIView):
     def post(self, request):
-        description_id = request.data.get("description_id")
-        user_id = str(request.data.get("user_id"))
-        approved = request.data.get("approved", False)
-        updated = request.data.get("updated", False)
+        user_id = request.data.get('user_id')
+        description_id = request.data.get('description_id')
+        action = request.data.get('action')  # 'like' or 'dislike'
 
-        if not description_id or not user_id:
-            return Response({"error": "description_id and user_id are required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not user_id or not description_id or not action:
+            return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             description = Descriptions.objects.get(id=description_id)
         except Descriptions.DoesNotExist:
             return Response({"error": "Description not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-        
-        if isinstance(description.update, dict):
-            update_history = description.update
+        reaction, created = CodeReaction.objects.get_or_create(user_id=user_id, description=description)
+
+        # Toggle Logic
+        if action == 'like':
+            if reaction.like:  # If already liked, prevent duplicate like
+                return Response({"message": "Reaction already updated"}, status=status.HTTP_200_OK)
+            else:  # Like it
+                reaction.like = True
+                description.like_count += 1
+
+                # Undo dislike if previously disliked
+                if reaction.dislike:
+                    reaction.dislike = False
+                    description.dislike_count -= 1
+
+        elif action == 'dislike':
+            if reaction.dislike:  # If already disliked, prevent duplicate dislike
+                return Response({"message": "Reaction already updated"}, status=status.HTTP_200_OK)
+            else:  # Dislike it
+                reaction.dislike = True
+                description.dislike_count += 1
+
+                # Undo like if previously liked
+                if reaction.like:
+                    reaction.like = False
+                    description.like_count -= 1
         else:
-            update_history = {}
+            return Response({"error": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if approved and description.review <= 3: 
-            description.review += 1  
-
-        if updated:
-            update_history[user_id] = True  
-        else:
-            update_history = {key: False for key in update_history.keys()}  
-            update_history[user_id] = True 
-
-        description.update = update_history 
+        reaction.save()
         description.save()
-
-        if description.review >= 3:
-            return Response({
-                "message": "Approved",
-                "description_id": description.id,
-                "review_count": description.review,
-                "update_history": update_history, 
-                "user_name": user.username
-            }, status=status.HTTP_200_OK)
+        description.refresh_from_db()       ####
 
         return Response({
-            "message": "Approved successfully",
-            "description_id": description.id,
-            "review_count": description.review,
-            "update_history": update_history,
-            "user_name": user.username
+            "message": "Reaction updated successfully",
+            "like_count": description.like_count,
+            "dislike_count": description.dislike_count
         }, status=status.HTTP_200_OK)
-    
