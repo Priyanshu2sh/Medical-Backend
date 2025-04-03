@@ -286,12 +286,11 @@ class HistoryAPIView(APIView):
         return Response(history_data, status=status.HTTP_200_OK)
 
 class CodeReactionAPIView(APIView):
-    def post(self, request):
-        user_id = request.data.get('user_id')
+    def post(self, request, user_id):  # Accept user_id from URL
         description_id = request.data.get('description_id')
         action = request.data.get('action')  # 'like' or 'dislike'
 
-        if not user_id or not description_id or not action:
+        if not description_id or not action:
             return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
@@ -303,25 +302,21 @@ class CodeReactionAPIView(APIView):
 
         # Toggle Logic
         if action == 'like':
-            if reaction.like:  # If already liked, prevent duplicate like
+            if reaction.like:
                 return Response({"message": "Reaction already updated"}, status=status.HTTP_200_OK)
-            else:  # Like it
+            else:
                 reaction.like = True
                 description.like_count += 1
-
-                # Undo dislike if previously disliked
                 if reaction.dislike:
                     reaction.dislike = False
                     description.dislike_count -= 1
 
         elif action == 'dislike':
-            if reaction.dislike:  # If already disliked, prevent duplicate dislike
+            if reaction.dislike:
                 return Response({"message": "Reaction already updated"}, status=status.HTTP_200_OK)
-            else:  # Dislike it
+            else:
                 reaction.dislike = True
                 description.dislike_count += 1
-
-                # Undo like if previously liked
                 if reaction.like:
                     reaction.like = False
                     description.like_count -= 1
@@ -330,7 +325,6 @@ class CodeReactionAPIView(APIView):
 
         reaction.save()
         description.save()
-        description.refresh_from_db()       ####
 
         return Response({
             "message": "Reaction updated successfully",
