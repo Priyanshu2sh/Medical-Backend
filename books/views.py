@@ -303,20 +303,36 @@ class CodeReactionAPIView(APIView):
         # Toggle Logic
         if action == 'like':
             if reaction.like:
-                return Response({"message": "Reaction already updated"}, status=status.HTTP_200_OK)
+                reaction_status = "like"
+                return Response({
+                    "message": "Reaction already updated",
+                    "like_count": description.like_count,
+                    "dislike_count": description.dislike_count,
+                    "liked": reaction.like,
+                    "disliked": reaction.dislike
+                }, status=status.HTTP_200_OK)
             else:
                 reaction.like = True
                 description.like_count += 1
+                reaction_status = "like"
                 if reaction.dislike:
                     reaction.dislike = False
                     description.dislike_count -= 1
 
         elif action == 'dislike':
             if reaction.dislike:
-                return Response({"message": "Reaction already updated"}, status=status.HTTP_200_OK)
+                reaction_status = "dislike"
+                return Response({
+                    "message": "Reaction already updated",
+                    "like_count": description.like_count,
+                    "dislike_count": description.dislike_count,
+                    "liked": reaction.like,
+                    "disliked": reaction.dislike
+                }, status=status.HTTP_200_OK)
             else:
                 reaction.dislike = True
                 description.dislike_count += 1
+                reaction_status = "dislike"
                 if reaction.like:
                     reaction.like = False
                     description.like_count -= 1
@@ -329,5 +345,9 @@ class CodeReactionAPIView(APIView):
         return Response({
             "message": "Reaction updated successfully",
             "like_count": description.like_count,
-            "dislike_count": description.dislike_count
+            "dislike_count": description.dislike_count,
+            "reaction": reaction_status,
+            "liked": reaction.like,
+            "disliked": reaction.dislike
         }, status=status.HTTP_200_OK)
+
