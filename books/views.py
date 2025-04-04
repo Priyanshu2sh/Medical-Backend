@@ -87,15 +87,18 @@ class BooksAPIView(APIView):
         return Response({"message": "Book deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
     
 class BookDetailsAPIView(APIView):
-    def get(self, request):
+    def get(self, request,user_id=None):
         books = Books.objects.all()
         books_data = []
+
+        # user_id = request.query_params.get("user_id")  
 
         for book in books:
             descriptions = Descriptions.objects.filter(book=book)
 
             for description in descriptions:
-                description.refresh_from_db()       #####
+                description.refresh_from_db()
+
                 sub_descriptions = SubDescriptions.objects.filter(description=description)
 
                 # Fetching sub-description history
@@ -129,19 +132,45 @@ class BookDetailsAPIView(APIView):
                     for h in desc_history
                 ]
 
+                reaction_status = "null"
+                liked = False
+                disliked = False
+                like_count = description.like_count
+                dislike_count = description.dislike_count
+
+                if user_id:
+                    try:
+                        reaction = CodeReaction.objects.get(user_id=user_id, description=description)
+                        if reaction.like:
+                            reaction_status = "like"
+                            liked = True
+                        elif reaction.dislike:
+                            reaction_status = "dislike"
+                            disliked = True
+                    except CodeReaction.DoesNotExist:
+                        pass
+
                 books_data.append({
-                    "book": {"id": book.id, "name": book.name, "version": book.version, "created_by": book.created_by, "updated_by": book.updated_by},
-                    'id': description.id,
+                    "book": {
+                        "id": book.id,
+                        "name": book.name,
+                        "version": book.version,
+                        "created_by": book.created_by,
+                        "updated_by": book.updated_by
+                    },
+                    "id": description.id,
                     "code": description.code,
                     "description": description.description,
                     "sub_descriptions": sub_descriptions_data,
-                    "history": desc_history_data,  # Include description history
-                    "like_count": description.like_count,  # Added like count
-                    "dislike_count": description.dislike_count,  # Added dislike count
+                    "history": desc_history_data,  
+                    "reaction": reaction_status, 
+                    "like_count": like_count,  
+                    "dislike_count": dislike_count,  
+                    "liked": liked,
+                    "disliked": disliked  
                 })
 
         return Response(books_data, status=status.HTTP_200_OK)
-
 
     def post(self, request):
         user_id = request.data.get("user_id")
@@ -303,14 +332,8 @@ class CodeReactionAPIView(APIView):
         # Toggle Logic
         if action == 'like':
             if reaction.like:
-                reaction_status = "like"
-                return Response({
-                    "message": "Reaction already updated",
-                    "like_count": description.like_count,
-                    "dislike_count": description.dislike_count,
-                    "liked": reaction.like,
-                    "disliked": reaction.dislike
-                }, status=status.HTTP_200_OK)
+                reaction_status = "like"  # Already liked
+                return Response({"message": "Reaction already updated"}, status=status.HTTP_200_OK)
             else:
                 reaction.like = True
                 description.like_count += 1
@@ -321,14 +344,8 @@ class CodeReactionAPIView(APIView):
 
         elif action == 'dislike':
             if reaction.dislike:
-                reaction_status = "dislike"
-                return Response({
-                    "message": "Reaction already updated",
-                    "like_count": description.like_count,
-                    "dislike_count": description.dislike_count,
-                    "liked": reaction.like,
-                    "disliked": reaction.dislike
-                }, status=status.HTTP_200_OK)
+                reaction_status = "dislike"  # Already disliked
+                return Response({"message": "Reaction already updated"}, status=status.HTTP_200_OK)
             else:
                 reaction.dislike = True
                 description.dislike_count += 1
@@ -346,8 +363,5 @@ class CodeReactionAPIView(APIView):
             "message": "Reaction updated successfully",
             "like_count": description.like_count,
             "dislike_count": description.dislike_count,
-            "reaction": reaction_status,
-            "liked": reaction.like,
-            "disliked": reaction.dislike
+            "reaction": reaction_status
         }, status=status.HTTP_200_OK)
-
