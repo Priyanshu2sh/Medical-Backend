@@ -155,8 +155,8 @@ class BookDetailsAPIView(APIView):
                         "id": book.id,
                         "name": book.name,
                         "version": book.version,
-                        "created_by": book.created_by,
-                        "updated_by": book.updated_by
+                         "created_by": book.created_by.username if book.created_by else None,
+    "updated_by": book.updated_by.username if book.updated_by else None
                     },
                     "id": description.id,
                     "code": description.code,
@@ -256,7 +256,16 @@ class BookDetailsAPIView(APIView):
         )
 
         # Updating sub-descriptions
+        # Updating sub-descriptions
         sub_descriptions_data = request.data.get("sub_descriptions", [])
+
+        # Get IDs of sub-descriptions from request
+        incoming_ids = [sub.get("id") for sub in sub_descriptions_data if sub.get("id")]
+
+        # Delete sub-descriptions that are not in the incoming list
+        SubDescriptions.objects.filter(description=description).exclude(id__in=incoming_ids).delete()
+
+        # Now update or create as usual
         for sub_desc in sub_descriptions_data:
             sub_id = sub_desc.get("id")
             sub_code = sub_desc.get("code")
