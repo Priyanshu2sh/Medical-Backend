@@ -4,10 +4,49 @@ from rest_framework import status
 from accounts.models import User
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import CommonQuestion, CommonTest, StatementOption
-from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer, StatementOptionSerializer
+from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz
+from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer, StatementOptionSerializer, QuizNameSerializer, NewQuizSerializer
 
+class QuizNameView(APIView):
+    def get(self, request):
+        quiz_names = QuizName.objects.all()
+        serializer = QuizNameSerializer(quiz_names, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
+
+    def post(self, request):
+        serializer = QuizNameSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Quiz category created successfully",
+                "data": serializer.data
+            }, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class NewQuizView(APIView):
+    def get(self, request, quiz_id):
+        new_quizzes = NewQuiz.objects.filter(quiz_id=quiz_id)
+        serializer = NewQuizSerializer(new_quizzes, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+    def post(self, request):
+        serializer = NewQuizSerializer(data=request.data, many=True)  # Allow multiple quiz questions
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Quiz questions created successfully",
+                "data": serializer.data
+            }, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class CommonQuestionListView(APIView):
     def post(self, request):
         serializer = CommonQuestionSerializer(data=request.data, many=True)  # Allows multiple questions at once

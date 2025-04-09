@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import Group, Permission, AbstractUser, PermissionsMixin, BaseUserManager
 from django.conf import settings
+from django.core.validators import RegexValidator
 from django.utils.timezone import now
 
 # Create your models here.
@@ -32,6 +33,16 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser, PermissionsMixin):
+    username = models.CharField(
+        max_length=150,
+        unique=True,
+        validators=[
+            RegexValidator(
+                regex=r'^[\w\s.@+-]+$',
+                message="Username can only contain letters, numbers, spaces, @, ., +, -, _"
+            )
+        ]
+    )
 
     role_choices = [
         ("Admin", "Admin"),

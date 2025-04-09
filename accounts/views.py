@@ -13,6 +13,8 @@ from django.utils.timezone import now
 from datetime import datetime, timedelta
 from django.conf import settings
 import jwt
+from rest_framework.permissions import IsAuthenticated
+
 
 # Create your views here.
 class JWTAuthentication(BaseAuthentication):
@@ -155,3 +157,61 @@ class LoginUser(APIView):
             'token': token,
             'user': user_data
         }, status=status.HTTP_200_OK)
+
+
+class ListUsers(APIView):
+    # authentication_classes = [JWTAuthentication]  # Use your custom JWTAuthentication
+    # permission_classes = [IsAuthenticated]  # Optional: only allow logged-in users
+
+    def get(self, request):
+        users = User.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class UpdateUserView(APIView):
+    # authentication_classes = [JWTAuthentication]
+    # permission_classes = [IsAuthenticated]
+
+    def put(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        data = {
+            'username': request.data.get('username', user.username),
+            'email': request.data.get('email', user.email),
+            'role': request.data.get('role', user.role)
+        }
+
+        serializer = UserSerializer(user, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "User updated successfully",
+                "user": serializer.data
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class UpdateProfile(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        user = request.user  # Authenticated user from JWT
+
+        # Allow only email and username update
+        data = {
+            'email': request.data.get('email', user.email),
+            'username': request.data.get('username', user.username),
+        }
+
+        serializer = UserSerializer(user, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                'message': 'Profile updated successfully',
+                'user': serializer.data
+            }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

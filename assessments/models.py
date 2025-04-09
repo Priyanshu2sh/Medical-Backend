@@ -43,4 +43,25 @@ class StatementOption(models.Model):
     def __str__(self):
         return f"Logical: {self.logical}, Analytical: {self.analytical}, Strategic: {self.strategic}, Thinking: {self.thinking}"
 
-        
+
+
+class QuizName(models.Model):
+    category_1 = models.CharField(max_length=100)
+    category_2 = models.CharField(max_length=100)
+    category_3 = models.CharField(max_length=100)
+    category_4 = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"{self.category_1} | {self.category_2} | {self.category_3} | {self.category_4}"
+
+
+class NewQuiz(models.Model):
+    question = models.TextField()
+    option_1 = models.CharField(max_length=255)
+    option_2 = models.CharField(max_length=255)
+    option_3 = models.CharField(max_length=255)
+    option_4 = models.CharField(max_length=255)
+    quiz = models.ForeignKey(QuizName, on_delete=models.CASCADE, related_name='questions')
+
+    def __str__(self):
+        return self.question
