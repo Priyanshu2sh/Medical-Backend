@@ -157,7 +157,7 @@ class LoginUser(APIView):
         user_data['r_level'] = user.r_level 
 
         return Response({
-            'message': 'Login successful',
+            'message': 'Login successfully',
             'token': token,
             'user': user_data
         }, status=status.HTTP_200_OK)

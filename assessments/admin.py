@@ -8,9 +8,11 @@ admin.site.register(CommonTest)
 
 admin.site.register(StatementOption)
 
+# admin.site.register(QuizName)
+
 @admin.register(QuizName)
 class QuizNameAdmin(admin.ModelAdmin):
-    list_display = ('id', 'category_1', 'category_2', 'category_3', 'category_4')
+    list_display = ('id', 'quiz_name', 'category_1', 'category_2', 'category_3', 'category_4')
 
 
 @admin.register(NewQuiz)

@@ -46,13 +46,14 @@ class StatementOption(models.Model):
 
 
 class QuizName(models.Model):
+    quiz_name = models.CharField(max_length=100, null=True, blank=True, default="Unnamed Quiz")
     category_1 = models.CharField(max_length=100)
     category_2 = models.CharField(max_length=100)
     category_3 = models.CharField(max_length=100)
     category_4 = models.CharField(max_length=100)
 
     def __str__(self):
-        return f"{self.category_1} | {self.category_2} | {self.category_3} | {self.category_4}"
+        return f"{self.quiz_name} | {self.category_1} | {self.category_2} | {self.category_3} | {self.category_4}"
 
 
 class NewQuiz(models.Model):
