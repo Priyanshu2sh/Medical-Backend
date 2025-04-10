@@ -135,6 +135,10 @@ class LoginUser(APIView):
         # Verify password
         if not check_password(password, user.password):
             return Response({'error': f'Email ({email}) found but password incorrect'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if account is disabled
+        if not user.is_active:
+            return Response({'error': 'Your account is disabled. Please contact admin.'}, status=status.HTTP_403_FORBIDDEN)
 
         # Check if the user is verified (Consumer)
         if user.verified_at is None:
@@ -215,3 +219,19 @@ class UpdateProfile(APIView):
             }, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class ToggleUserStatus(APIView):
+    def put(self, request, user_id):
+        try:
+            user = User.objects.get(pk=user_id)
+            user.is_active = not user.is_active  # toggle status
+            user.save()
+            status_str = "enabled" if user.is_active else "disabled"
+            return Response({
+                "message": f"User account has been {status_str}.",
+                "user_id": user.id,
+                "is_active": user.is_active
+            }, status=200)
+        except User.DoesNotExist:
+            return Response({"error": "User not found."}, status=404)
