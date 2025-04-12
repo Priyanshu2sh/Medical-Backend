@@ -118,6 +118,7 @@ class BookDetailsAPIView(APIView):
                         "id": sub_desc.id,
                         "code": sub_desc.code,
                         "sub_description": sub_desc.sub_description,
+                        "sub_data": sub_desc.sub_data,
                         "history": sub_history_data  # Include sub-description history
                     })
 
@@ -198,6 +199,7 @@ class BookDetailsAPIView(APIView):
                 description=description,
                 code=sub_desc.get("code"),
                 sub_description=sub_desc.get("sub_description"),
+                sub_data=sub_desc.get("sub_data"), 
                 created_by=user,
                 updated_by=user
             )
@@ -274,10 +276,11 @@ class BookDetailsAPIView(APIView):
             if sub_id:
                 try:
                     sub_description = SubDescriptions.objects.get(id=sub_id, description=description)
-                    previous_sub_data = {"code": sub_description.code, "sub_description": sub_description.sub_description}
+                    previous_sub_data = {"code": sub_description.code, "sub_description": sub_description.sub_description,"sub_data": sub_description.sub_data}
                     
                     sub_description.code = sub_code
                     sub_description.sub_description = sub_description_text
+                    sub_description.sub_data = sub_desc.get("sub_data")
                     sub_description.updated_by = user
                     sub_description.save()
 
@@ -292,7 +295,12 @@ class BookDetailsAPIView(APIView):
                     return Response({"error": f"Sub-description with ID {sub_id} not found"}, status=status.HTTP_404_NOT_FOUND)
             else:
                 SubDescriptions.objects.create(
-                    description=description, code=sub_code, sub_description=sub_description_text, created_by=user, updated_by=user
+                    description=description,
+                    code=sub_code,
+                    sub_description=sub_description_text,
+                    sub_data=sub_desc.get("sub_data"),  
+                    created_by=user,
+                    updated_by=user
                 )
 
         return Response({ "book": description.book.id if description.book else None,

@@ -24,6 +24,7 @@ class SubDescriptions(models.Model):
     description = models.ForeignKey(Descriptions, related_name='sub_descriptions', on_delete=models.CASCADE)
     code = models.CharField(max_length=50)
     sub_description = models.TextField()
+    sub_data = models.TextField(null=True, blank=True)  
     created_by = models.ForeignKey(User, related_name='sub_descriptions_created', on_delete=models.SET_NULL, null=True)
     updated_by = models.ForeignKey(User, related_name='sub_descriptions_updated', on_delete=models.SET_NULL, null=True)
     updated_at = models.DateTimeField(auto_now=True)
