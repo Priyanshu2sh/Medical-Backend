@@ -193,7 +193,8 @@ class UpdateUserView(APIView):
             serializer.save()
             return Response({
                 "message": "User updated successfully",
-                "user": serializer.data
+                "user": serializer.data,
+                "is_active": user.is_active
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
