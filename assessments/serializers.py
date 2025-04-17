@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz
+from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult
 
 class CommonQuestionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -38,3 +38,9 @@ class NewQuizSerializer(serializers.ModelSerializer):
     class Meta:
         model = NewQuiz
         fields = ['id', 'question', 'option_1', 'option_2', 'option_3', 'option_4', 'quiz', 'quiz_id']
+
+
+class QuizResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuizResult
+        fields = '__all__'

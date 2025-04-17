@@ -4,8 +4,8 @@ from rest_framework import status
 from accounts.models import User
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz
-from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer, StatementOptionSerializer, QuizNameSerializer, NewQuizSerializer
+from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult
+from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer, StatementOptionSerializer, QuizNameSerializer, NewQuizSerializer, QuizResultSerializer
 from rest_framework.exceptions import NotFound
 
 class QuizNameView(APIView):
@@ -69,6 +69,67 @@ class NewQuizView(APIView):
             return Response({"message": "Quiz question deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except NewQuiz.DoesNotExist:
             return Response({"error": "Quiz question not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+class QuizResultView(APIView):
+    def post(self, request):
+        user_id = request.data.get('user_id')  # Get from request
+        
+        try:
+            user = User.objects.get(id=user_id) if user_id else None
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+        quiz_id = request.data.get('quiz_id')
+        answers = request.data.get('answers', [])  # Format: [{"question_id": 1, "selected_category": "category_1"}, ...]
+        
+        try:
+            quiz = QuizName.objects.get(id=quiz_id)
+        except QuizName.DoesNotExist:
+            return Response({"error": "Quiz not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Initialize category counts
+        counts = {
+            'category_1': 0,
+            'category_2': 0,
+            'category_3': 0,
+            'category_4': 0,
+            'skip': 0
+        }
+        
+        for answer in answers:
+            selected_category = answer.get('selected_category')
+            
+            # Validate the category belongs to this quiz
+            if selected_category in ['category_1', 'category_2', 'category_3', 'category_4']:
+                counts[selected_category] += 1
+            else:
+                counts['skip'] += 1
+        
+        # Determine personality result based on highest count
+        max_category = max(counts, key=counts.get)
+        
+        # Map to your result types (customize this)
+        result_map = {
+            'category_1': "Type A Personality",
+            'category_2': "Type B Personality",
+            'category_3': "Type C Personality",
+            'category_4': "Type D Personality",
+            'skip': "Undetermined"
+        }
+        
+        # Create QuizResult record
+        quiz_result = QuizResult.objects.create(
+            user_id=user, 
+            quiz=quiz,
+            cat_1_marks=counts['category_1'],
+            cat_2_marks=counts['category_2'],
+            cat_3_marks=counts['category_3'],
+            cat_4_marks=counts['category_4'],
+            skip=counts['skip'],
+            result=result_map[max_category]
+        )
+        
+        serializer = QuizResultSerializer(quiz_result)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class CommonQuestionListView(APIView):
@@ -124,7 +185,7 @@ class CommonQuestionListView(APIView):
 
 class ComputeTestResultView(APIView):
     def post(self, request):
-        user_id = request.data.get("user_id")  # Get user ID from request
+        user_id = request.data.get('user_id')  # Get user ID from request
         question_type = request.data.get("type")
         selected_categories = request.data.get("responses")  # Array of category selections
 

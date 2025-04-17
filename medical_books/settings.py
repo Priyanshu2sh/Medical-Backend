@@ -41,6 +41,7 @@ INSTALLED_APPS = [
 
     
     'rest_framework',
+    # 'rest_framework_simplejwt', 
     'accounts',
     'books',
     'assessments', 
@@ -89,7 +90,7 @@ WSGI_APPLICATION = 'medical_books.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': BASE_DIR / 'db'  / 'db.sqlite3',
     }
 }
 
@@ -151,6 +152,7 @@ DEFAULT_FROM_EMAIL = 'prushaltech@gmail.com'
 
 # REST_FRAMEWORK = {
 #     'DEFAULT_AUTHENTICATION_CLASSES': (
+#         # 'rest_framework_simplejwt.authentication.JWTAuthentication', # For JWT-based auth
 #         'rest_framework.authentication.SessionAuthentication',  # For session-based auth
 #         'rest_framework.authentication.TokenAuthentication',  # For token-based auth
 #         'rest_framework.authentication.BasicAuthentication',  # Optional
