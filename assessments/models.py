@@ -66,3 +66,18 @@ class NewQuiz(models.Model):
 
     def __str__(self):
         return self.question
+    
+
+# class QuizResult(models.Model):
+#     user = models.ForeignKey(User, on_delete=models.CASCADE)
+#     quiz = models.ForeignKey(QuizName, on_delete=models.CASCADE)
+#     cat_1_marks = models.IntegerField(default=0)
+#     cat_2_marks = models.IntegerField(default=0)
+#     cat_3_marks = models.IntegerField(default=0)
+#     cat_4_marks = models.IntegerField(default=0)
+#     skip = models.IntegerField()
+#     result = models.CharField(max_length=100, blank=True, null=True)
+#     date_taken = models.DateTimeField(auto_now_add=True)
+
+#     def __str__(self):
+#         return f"{self.user.username} - {self.quiz.quiz_name} - {self.score}"

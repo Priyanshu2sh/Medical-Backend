@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz
 from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer, StatementOptionSerializer, QuizNameSerializer, NewQuizSerializer
+from rest_framework.exceptions import NotFound
 
 class QuizNameView(APIView):
     def get(self, request):
@@ -45,6 +46,29 @@ class NewQuizView(APIView):
             }, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def put(self, request, quiz_id, pk=None):
+        try:
+            quiz_question = NewQuiz.objects.get(pk=pk, quiz_id=quiz_id)
+        except NewQuiz.DoesNotExist:
+            raise NotFound("Quiz question not found.")
+
+        serializer = NewQuizSerializer(quiz_question, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Quiz question updated successfully",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, id):
+        try:
+            quiz_question = NewQuiz.objects.get(id=id)
+            quiz_question.delete()
+            return Response({"message": "Quiz question deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except NewQuiz.DoesNotExist:
+            return Response({"error": "Quiz question not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
 class CommonQuestionListView(APIView):
