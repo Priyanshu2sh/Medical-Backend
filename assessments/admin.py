@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz
+from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult
 
 # Register your models here.
 admin.site.register(CommonQuestion)
@@ -20,3 +20,6 @@ class NewQuizAdmin(admin.ModelAdmin):
     list_display = ('id', 'question', 'option_1', 'option_2', 'option_3', 'option_4', 'quiz')
     search_fields = ('question',)
     list_filter = ('quiz',)
+
+
+admin.site.register(QuizResult)

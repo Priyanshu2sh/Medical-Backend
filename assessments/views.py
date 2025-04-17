@@ -105,7 +105,11 @@ class QuizResultView(APIView):
                 counts['skip'] += 1
         
         # Determine personality result based on highest count
-        max_category = max(counts, key=counts.get)
+        max_category = max(['category_1', 'category_2', 'category_3', 'category_4'], 
+                         key=lambda k: counts[k])
+        
+        personality_type = getattr(quiz, max_category)  # e.g., "Analytical"
+        result = f"{personality_type} Personality" 
         
         # Map to your result types (customize this)
         result_map = {
@@ -125,7 +129,7 @@ class QuizResultView(APIView):
             cat_3_marks=counts['category_3'],
             cat_4_marks=counts['category_4'],
             skip=counts['skip'],
-            result=result_map[max_category]
+            result=result 
         )
         
         serializer = QuizResultSerializer(quiz_result)
