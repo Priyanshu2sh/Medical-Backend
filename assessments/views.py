@@ -72,12 +72,15 @@ class NewQuizView(APIView):
         
 class QuizResultView(APIView):
     def post(self, request):
-        user_id = request.data.get('user_id')  # Get from request
-        
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({"error": "user_id is required"}, status=400)
+
         try:
-            user = User.objects.get(id=user_id) if user_id else None
+            user = User.objects.get(id=user_id)  # Fetch the User object
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=404)
+
         quiz_id = request.data.get('quiz_id')
         answers = request.data.get('answers', [])  # Format: [{"question_id": 1, "selected_category": "category_1"}, ...]
         
@@ -134,6 +137,22 @@ class QuizResultView(APIView):
         
         serializer = QuizResultSerializer(quiz_result)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+
+class QuizResultHistoryView(APIView):
+    def get(self, request, user_id):
+        try:
+            # Fetch quiz results for the user, ordered by latest
+            results = QuizResult.objects.filter(user_id=user_id).order_by('-date_taken')
+            result_serializer = QuizResultSerializer(results, many=True)
+
+            return Response({
+                "quiz_history": result_serializer.data
+            }, status=status.HTTP_200_OK)
+
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
 
 
 class CommonQuestionListView(APIView):

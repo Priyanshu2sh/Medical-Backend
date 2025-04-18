@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import CommonQuestionListView, ComputeTestResultView, StatementOptionView, TestHistoryView, QuizNameView, NewQuizView, QuizResultView
+from .views import CommonQuestionListView, ComputeTestResultView, StatementOptionView, TestHistoryView, QuizNameView, NewQuizView, QuizResultView, QuizResultHistoryView
 
 urlpatterns = [
     path('question_add', CommonQuestionListView.as_view()),
@@ -21,5 +21,6 @@ urlpatterns = [
     path('quiz/<int:quiz_id>/question/<int:pk>/', NewQuizView.as_view(), name='update-quiz-question'),
     path('quiz/question/<int:id>/delete/', NewQuizView.as_view(), name='delete-quiz-question'),
     path('quiz-results/', QuizResultView.as_view(), name='quiz-results'),
+    path('quiz/results/user/<int:user_id>/', QuizResultHistoryView.as_view(), name='user-quiz-history'),
 
 ]   

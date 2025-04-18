@@ -41,6 +41,8 @@ class NewQuizSerializer(serializers.ModelSerializer):
 
 
 class QuizResultSerializer(serializers.ModelSerializer):
+    quiz_name = serializers.CharField(source='quiz.quiz_name')  # Fetch quiz name from the QuizName model
+
     class Meta:
         model = QuizResult
-        fields = '__all__'
+        fields = ['id', 'user_id', 'quiz', 'quiz_name', 'cat_1_marks', 'cat_2_marks', 'cat_3_marks', 'cat_4_marks', 'skip', 'result', 'date_taken']
