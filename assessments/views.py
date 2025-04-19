@@ -29,10 +29,48 @@ class QuizNameView(APIView):
 
 
 class NewQuizView(APIView):
+    # class NewQuizView(APIView):
+    # def get(self, request, quiz_id):
+    #     new_quizzes = NewQuiz.objects.filter(quiz_id=quiz_id)
+    #     serializer = NewQuizSerializer(new_quizzes, many=True)
+    #     return Response(serializer.data, status=status.HTTP_200_OK)
+    
     def get(self, request, quiz_id):
         new_quizzes = NewQuiz.objects.filter(quiz_id=quiz_id)
-        serializer = NewQuizSerializer(new_quizzes, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        formatted_questions = []
+
+        for question in new_quizzes:
+            # Extract options
+            options = [
+                ("option_1", question.option_1),
+                ("option_2", question.option_2),
+                ("option_3", question.option_3),
+                ("option_4", question.option_4),
+            ]
+
+            # Shuffle them
+            random.shuffle(options)
+
+            # Turn into a dictionary for the response
+            shuffled_options = {key: value for key, value in options}
+
+            # Final response per question
+            question_data = {
+                "id": question.id,
+                "question": question.question,
+                **shuffled_options,
+                "quiz": {
+                    "id": question.quiz.id,
+                    "quiz_name": question.quiz.quiz_name,
+                    "category_1": question.quiz.category_1,
+                    "category_2": question.quiz.category_2,
+                    "category_3": question.quiz.category_3,
+                    "category_4": question.quiz.category_4
+                }
+            }
+            formatted_questions.append(question_data)
+
+        return Response(formatted_questions, status=status.HTTP_200_OK)
     
 
     def post(self, request):
