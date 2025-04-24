@@ -12,7 +12,7 @@ admin.site.register(StatementOption)
 
 @admin.register(QuizName)
 class QuizNameAdmin(admin.ModelAdmin):
-    list_display = ('id', 'quiz_name', 'category_1', 'category_2', 'category_3', 'category_4')
+    list_display = ('id', 'quiz_name','type', 'category_1', 'category_2', 'category_3', 'category_4')
 
 
 @admin.register(NewQuiz)

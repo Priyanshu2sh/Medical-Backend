@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult
 from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer, StatementOptionSerializer, QuizNameSerializer, NewQuizSerializer, QuizResultSerializer
 from rest_framework.exceptions import NotFound
+from django.db.models import Count
 
 class QuizNameView(APIView):
     def get(self, request):
@@ -26,6 +27,12 @@ class QuizNameView(APIView):
             }, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class TestQuizNameView(APIView):
+    def get(self, request):
+        quiz_names = QuizName.objects.annotate(question_count=Count('questions')).filter(question_count__gte=20)
+        serializer = QuizNameSerializer(quiz_names, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class NewQuizView(APIView):
@@ -36,7 +43,7 @@ class NewQuizView(APIView):
     #     return Response(serializer.data, status=status.HTTP_200_OK)
     
     def get(self, request, quiz_id):
-        new_quizzes = NewQuiz.objects.filter(quiz_id=quiz_id)
+        new_quizzes = NewQuiz.objects.filter(quiz_id=quiz_id).order_by('?')[:20]
         formatted_questions = []
 
         for question in new_quizzes:
@@ -107,6 +114,21 @@ class NewQuizView(APIView):
             return Response({"message": "Quiz question deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except NewQuiz.DoesNotExist:
             return Response({"error": "Quiz question not found."}, status=status.HTTP_404_NOT_FOUND)
+
+class QuizAllQuestionView(APIView):
+    def get(self, request, quiz_id):
+        try:
+            quiz_questions = NewQuiz.objects.filter(quiz_id=quiz_id)
+            serializer = NewQuizSerializer(quiz_questions, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except NewQuiz.DoesNotExist:
+            return Response({"error": "Quiz not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+class QuizByTypeView(APIView):
+    def get(self, request, quiz_type):
+        quizzes = QuizName.objects.filter(type=quiz_type)
+        serializer = QuizNameSerializer(quizzes, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
         
 class QuizResultView(APIView):
     def post(self, request):
@@ -206,7 +228,7 @@ class CommonQuestionListView(APIView):
                 status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+      
     def get(self, request):
         questions = CommonQuestion.objects.all()
         formatted_questions = []

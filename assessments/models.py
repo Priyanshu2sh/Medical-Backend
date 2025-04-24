@@ -51,13 +51,17 @@ class QuizName(models.Model):
     category_2 = models.CharField(max_length=100)
     category_3 = models.CharField(max_length=100)
     category_4 = models.CharField(max_length=100)
-
+    type = models.CharField(max_length=20, choices=
+                            [("question-based", "Question-Based"), 
+                             ("statement-based", "Statement-Based")
+                             ], default="question-based")
+   
     def __str__(self):
         return f"{self.quiz_name} | {self.category_1} | {self.category_2} | {self.category_3} | {self.category_4}"
 
 
 class NewQuiz(models.Model):
-    question = models.TextField()
+    question = models.TextField(null=True, blank=True)
     option_1 = models.CharField(max_length=255)
     option_2 = models.CharField(max_length=255)
     option_3 = models.CharField(max_length=255)
@@ -65,7 +69,7 @@ class NewQuiz(models.Model):
     quiz = models.ForeignKey(QuizName, on_delete=models.CASCADE, related_name='questions')
 
     def __str__(self):
-        return self.question
+        return self.question or "No Question"
     
 
 class QuizResult(models.Model):
