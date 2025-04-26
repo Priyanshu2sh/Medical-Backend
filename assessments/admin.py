@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult
+from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult,McqQuiz, McqQuestions,QuizResultss
 
 # Register your models here.
 admin.site.register(CommonQuestion)
@@ -21,3 +21,24 @@ class NewQuizAdmin(admin.ModelAdmin):
     list_filter = ('quiz',)
 
 admin.site.register(QuizResult)
+
+
+
+@admin.register(McqQuiz)
+class McqQuizAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name', 'type']
+    search_fields = ['name', 'description']
+    filter_horizontal = ['questions']
+
+@admin.register(McqQuestions)
+class McqQuestionsAdmin(admin.ModelAdmin):
+    list_display = ['id', 'question', 'type']
+    search_fields = ['question']
+
+
+# @admin.register(QuizResultss)
+# class QuizResultAdmin(admin.ModelAdmin):
+#     list_display = ('user_id', 'quiz', 'score', 'total_questions', 'submitted_at')
+#     search_fields = ('user_id__username', 'quiz__name')
+#     list_filter = ('quiz', 'score')
+   
