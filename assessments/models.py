@@ -85,3 +85,58 @@ class QuizResult(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.quiz.quiz_name} - {self.score}"
+    
+
+class McqQuiz(models.Model):
+    SINGLE_CHOICE = 'single-choice'
+    MULTIPLE_CHOICE = 'multiple-choice'
+    QUIZ_TYPE_CHOICES = [
+        (SINGLE_CHOICE, 'Single Choice'),
+        (MULTIPLE_CHOICE, 'Multiple Choice'),
+    ]
+
+    type = models.CharField(max_length=20, choices=QUIZ_TYPE_CHOICES)
+    name = models.CharField(max_length=255)
+    description = models.TextField()
+
+    questions = models.ManyToManyField('McqQuestions', related_name='quizzes')
+
+    def __str__(self):
+        return self.name
+    
+
+class McqQuestions(models.Model):
+    SINGLE_CHOICE = 'single-choice'
+    MULTIPLE_CHOICE = 'multiple-choice'
+    QUESTION_TYPE_CHOICES = [
+        (SINGLE_CHOICE, 'Single Choice'),
+        (MULTIPLE_CHOICE, 'Multiple Choice'),
+    ]
+
+    question = models.TextField()
+    options_1 = models.CharField(max_length=255)
+    options_2 = models.CharField(max_length=255)
+    options_3 = models.CharField(max_length=255)
+    options_4 = models.CharField(max_length=255)
+    
+    correct_ans = models.JSONField(help_text="Store correct answer(s) as JSON. For example: ['option_1'] or ['option_2', 'option_3']")
+    type = models.CharField(
+        max_length=20,
+        choices=QUESTION_TYPE_CHOICES,
+        default=SINGLE_CHOICE,
+        help_text="Define whether the question is single or multiple choice"
+    )
+
+
+    def __str__(self):
+        return self.question
+    
+class QuizResultss(models.Model):
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    quiz = models.ForeignKey(QuizName, on_delete=models.CASCADE)
+    score = models.PositiveIntegerField(default=0)
+    total_questions = models.PositiveIntegerField()
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.quiz.name} - {self.score}/{self.total_questions}"

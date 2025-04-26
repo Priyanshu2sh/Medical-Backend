@@ -4,8 +4,8 @@ from rest_framework import status
 from accounts.models import User
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult
-from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer, StatementOptionSerializer, QuizNameSerializer, NewQuizSerializer, QuizResultSerializer
+from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult, McqQuiz, McqQuestions, QuizResultss
+from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer, StatementOptionSerializer, QuizNameSerializer, NewQuizSerializer, QuizResultSerializer, McqQuizSerializer, McqQuestionsSerializer
 from rest_framework.exceptions import NotFound
 from django.db.models import Count
 
@@ -429,3 +429,212 @@ class TestHistoryView(APIView):
 
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class McqQuizCreateView(APIView):
+    def post(self, request):
+        serializer = McqQuizSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request):
+        quizzes = McqQuiz.objects.all()
+        serializer = McqQuizSerializer(quizzes, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class McqQuizBytypeView(APIView):
+    def get(self, request, type):
+        quizzes = McqQuiz.objects.filter(type=type)
+        serializer = McqQuizSerializer(quizzes, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)    
+
+
+class McqQuestionCreateView(APIView):
+    def post(self, request):
+        serializer = McqQuestionsSerializer(data=request.data, many=True)  # Allow multiple questions at once
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Questions created successfully.",
+                "data": serializer.data
+            }, status=status.HTTP_201_CREATED)
+        return Response({
+            "message": "Failed to create questions.",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    def get(self, request):
+        questions = McqQuestions.objects.all()
+        serializer = McqQuestionsSerializer(questions, many=True)
+        return Response({
+            "message": "Questions retrieved successfully.",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+
+    def put(self, request, question_id):
+        try:
+            question = McqQuestions.objects.get(id=question_id)
+        except McqQuestions.DoesNotExist:
+            return Response({
+                "message": "Question not found."
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = McqQuestionsSerializer(question, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Question updated successfully.",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            "message": "Failed to update question.",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, question_id):
+        try:
+            question = McqQuestions.objects.get(id=question_id)
+        except McqQuestions.DoesNotExist:
+            return Response({
+                "message": "Question not found."
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        question.delete()
+        return Response({
+            "message": "Question deleted successfully."
+        }, status=status.HTTP_204_NO_CONTENT)
+    
+    def delete(self, request, question_id):
+        try:
+            question = McqQuestions.objects.get(id=question_id)
+        except McqQuestions.DoesNotExist:
+            return Response({'detail': 'Question not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        question.delete()
+        return Response({'detail': 'Question deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
+    
+class McqQuestionsByQuizForTestView(APIView):
+
+    # class TestQuizNameView(APIView):       # i have to use this type of API condition for MCQ quiz tommarow
+    # def get(self, request):
+    #     quiz_names = QuizName.objects.annotate(question_count=Count('questions')).filter(question_count__gte=20)
+    #     serializer = QuizNameSerializer(quiz_names, many=True)
+    #     return Response(serializer.data, status=status.HTTP_200_OK)
+    def get(self, request, quiz_id):
+        try:
+            quiz = McqQuiz.objects.get(id=quiz_id)
+        except McqQuiz.DoesNotExist:
+            return Response({"detail": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Get 20 random questions related to the quiz
+        questions = quiz.questions.all().order_by('?')[:20]
+        formatted_questions = []
+
+        for question in questions:
+                # Extract options
+            options = [
+                ("options_1", question.options_1),
+                ("options_2", question.options_2),
+                ("options_3", question.options_3),
+                ("options_4", question.options_4),
+            ]
+
+                # Shuffle them
+            random.shuffle(options)
+
+                # Turn into a dictionary for the response
+            shuffled_options = {key: value for key, value in options}
+
+                # Final response per question
+            question_data = {
+                "id": question.id,
+                "question": question.question,
+                **shuffled_options,
+                    # "quiz": {
+                    #     "id": question.quiz.id,
+                    #     "quiz_name": question.quiz.quiz_name,
+                    #     "category_1": question.quiz.category_1,
+                    #     "category_2": question.quiz.category_2,
+                    #     "category_3": question.quiz.category_3,
+                    #     "category_4": question.quiz.category_4
+                    # }
+                # "correct_answer": question.correct_ans
+            }
+            formatted_questions.append(question_data)
+        
+        return Response(formatted_questions, status=status.HTTP_200_OK)
+    
+
+class McqQuestionsByQuizIdView(APIView):
+    def get(self, request, quiz_id):
+        try:
+            quiz = McqQuiz.objects.get(id=quiz_id)
+        except McqQuiz.DoesNotExist:
+            return Response({"detail": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        questions = quiz.questions.all()
+        serializer = McqQuestionsSerializer(questions, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class McqQuestionsByTypeView(APIView):
+     def get(self, request, type):
+        questions = McqQuestions.objects.filter(type=type)
+        serializer = McqQuestionsSerializer(questions, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+     
+
+class McqResultAPIView(APIView):
+    def post(self, request):
+        data = request.data
+        user_id = data.get('user_id')
+        quiz_id = data.get('quiz_id')
+        responses = data.get('response', [])
+
+        total_questions = len(responses)
+        correct_count = 0
+        detailed_results = []
+
+        for item in responses:
+            question_id = item.get('question_id')
+            user_answer = item.get('user_answer')
+
+            try:
+                question = McqQuestions.objects.get(id=question_id)
+            except McqQuestions.DoesNotExist:
+                continue
+
+            correct_answer = question.correct_ans
+
+            if isinstance(correct_answer, list):  # Multi-choice
+                if sorted(user_answer) == sorted(correct_answer):
+                    correct_count += 1
+                    is_correct = True
+                else:
+                    is_correct = False
+            else:  # Single choice
+                if user_answer == correct_answer:
+                    correct_count += 1
+                    is_correct = True
+                else:
+                    is_correct = False
+
+            detailed_results.append({
+                'question_id': question_id,
+                'user_answer': user_answer,
+                'correct_answer': correct_answer,
+                'is_correct': is_correct
+            })
+
+        score = correct_count
+        result = {
+            'user_id': user_id,
+            'quiz_id': quiz_id,
+            'score': score,
+            'total_questions': total_questions,
+            'detailed_results': detailed_results
+        }
+        
+        return Response(result, status=status.HTTP_200_OK)

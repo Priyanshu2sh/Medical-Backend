@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import CommonQuestionListView, ComputeTestResultView, StatementOptionView, TestHistoryView, QuizNameView, NewQuizView, QuizResultView, QuizResultHistoryView, TestQuizNameView, QuizAllQuestionView, QuizByTypeView
+from .views import CommonQuestionListView, ComputeTestResultView, StatementOptionView, TestHistoryView, QuizNameView, NewQuizView, QuizResultView, QuizResultHistoryView, TestQuizNameView, QuizAllQuestionView, QuizByTypeView, McqQuizCreateView, McqQuestionCreateView,  McqQuestionsByQuizForTestView, McqQuestionsByQuizIdView,McqQuestionsByTypeView, McqQuizBytypeView
 
 urlpatterns = [
     path('question_add', CommonQuestionListView.as_view()),
@@ -32,5 +32,23 @@ urlpatterns = [
     path('quiz/question/<int:id>/delete/', NewQuizView.as_view(), name='delete-quiz-question'),
     path('quiz-results/', QuizResultView.as_view(), name='quiz-results'),
     path('quiz/results/user/<int:user_id>/', QuizResultHistoryView.as_view(), name='user-quiz-history'),
+
+
+    #for mcq quiz
+
+    path('mcq-quiz/', McqQuizCreateView.as_view(), name='create-quiz'),
+    path('mcq-quizzes/', McqQuizCreateView.as_view(), name='get-mcq-quizzes'),
+    path('mcq-quiz/type/<str:type>/', McqQuizBytypeView.as_view(), name='mcq-quiz-by-type'),
+    # path('mcq-quizzes/<int:quiz_id>/', McqQuestionCreateView.as_view(), name='get-mcq-quiz'),
+
+    path('mcq-question/', McqQuestionCreateView.as_view(), name='create-question'),
+    # path('mcq-questions/', McqQuestionCreateView.as_view(), name='mcq-questions-list'),     #for get all questions
+    path('mcq-quiz/<int:quiz_id>/questions/', McqQuestionsByQuizForTestView.as_view(), name='mcq-questions-by-quiz'),
+    path('mcq-questions/<int:question_id>/edit/', McqQuestionCreateView.as_view(), name='mcq-question-edit'),
+    path('mcq-questions/<int:question_id>/delete/', McqQuestionCreateView.as_view(), name='mcq-question-delete'),
+    
+    path('mcq-quiz/<int:quiz_id>/questions-all/', McqQuestionsByQuizIdView.as_view(), name='mcq-questions-by-quiz-id'),
+    path('mcq-questions/type/<str:type>/',McqQuestionsByTypeView.as_view(), name='mcq-questions-by-type'),
+    
 
 ]   
