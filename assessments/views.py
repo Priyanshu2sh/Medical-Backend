@@ -4,8 +4,8 @@ from rest_framework import status
 from accounts.models import User
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult, McqQuiz, McqQuestions, QuizResultss
-from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer, StatementOptionSerializer, QuizNameSerializer, NewQuizSerializer, QuizResultSerializer, McqQuizSerializer, McqQuestionsSerializer
+from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult, McqQuiz, McqQuestions, McqQuizResult
+from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer, StatementOptionSerializer, QuizNameSerializer, NewQuizSerializer, QuizResultSerializer, McqQuizSerializer, McqQuestionsSerializer,McqQuizResultSerializer
 from rest_framework.exceptions import NotFound
 from django.db.models import Count
 
@@ -444,6 +444,14 @@ class McqQuizCreateView(APIView):
         serializer = McqQuizSerializer(quizzes, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+    def delete(self, request, quiz_id):
+        try:
+            quiz = McqQuiz.objects.get(id=quiz_id)
+            quiz.delete()
+            return Response({"detail": "Quiz deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except McqQuiz.DoesNotExist:
+            return Response({"detail": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)
+    
 class McqQuizBytypeView(APIView):
     def get(self, request, type):
         quizzes = McqQuiz.objects.filter(type=type)
@@ -552,6 +560,7 @@ class McqQuestionsByQuizForTestView(APIView):
             question_data = {
                 "id": question.id,
                 "question": question.question,
+                "type": question.type, 
                 **shuffled_options,
                     # "quiz": {
                     #     "id": question.quiz.id,
@@ -586,7 +595,7 @@ class McqQuestionsByTypeView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
      
 
-class McqResultAPIView(APIView):
+class McqQuizResultAPIView(APIView):
     def post(self, request):
         data = request.data
         user_id = data.get('user_id')
@@ -595,11 +604,16 @@ class McqResultAPIView(APIView):
 
         total_questions = len(responses)
         correct_count = 0
+        skip_count = 0
         detailed_results = []
 
         for item in responses:
             question_id = item.get('question_id')
             user_answer = item.get('user_answer')
+
+            if not user_answer:  # If user_answer is empty or None
+                skip_count += 1
+                continue
 
             try:
                 question = McqQuestions.objects.get(id=question_id)
@@ -629,12 +643,52 @@ class McqResultAPIView(APIView):
             })
 
         score = correct_count
+        attempted_questions = total_questions - skip_count
+         # Save result in the database
+        quiz_result = McqQuizResult.objects.create(
+            user_id=user_id,
+            quiz_id=quiz_id,
+            score=score,
+            total_questions=total_questions
+        )
+        submitted_at = quiz_result.submitted_at
+
+        # Calculate performance
+        if attempted_questions > 0:
+            percentage = (score / attempted_questions) * 100
+        else:
+            percentage = 0
+
+        if percentage < 20:
+            performance = "Unsatisfactory"
+        elif 20 <= percentage < 40:
+            performance = "Average"
+        elif 40 <= percentage < 60:
+            performance = "Good"
+        elif 60 <= percentage < 80:
+            performance = "Excellent"
+        else:
+            performance = "Marvelous"
+
         result = {
             'user_id': user_id,
             'quiz_id': quiz_id,
             'score': score,
             'total_questions': total_questions,
-            'detailed_results': detailed_results
+            'skip_questions': skip_count,
+            'submitted_at': submitted_at,
+            'performance': performance,
+            # 'detailed_results': detailed_results
         }
         
         return Response(result, status=status.HTTP_200_OK)
+
+
+class McqQuizResultHistoryView(APIView):
+    def get(self, request, user_id):
+        results = McqQuizResult.objects.filter(user_id=user_id).order_by('-submitted_at')
+        if not results.exists():
+            return Response({"detail": "No results found for this user."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = McqQuizResultSerializer(results, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

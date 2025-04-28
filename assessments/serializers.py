@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult, McqQuiz, McqQuestions
+from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult, McqQuiz, McqQuestions, McqQuizResult
 
 class CommonQuestionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -52,6 +52,7 @@ class McqQuestionsSerializer(serializers.ModelSerializer):
     class Meta:
         model = McqQuestions
         fields = '__all__'
+        # fields = ['id', 'quiz', 'question', 'options_1', 'options_2', 'options_3', 'options_4', 'correct_ans', 'type']
 
 
 class McqQuizSerializer(serializers.ModelSerializer):
@@ -70,3 +71,9 @@ class McqQuizSerializer(serializers.ModelSerializer):
         quiz = McqQuiz.objects.create(**validated_data)
         quiz.questions.set(questions)  # Set the M2M relationship
         return quiz
+    
+
+class McqQuizResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = McqQuizResult
+        fields = '__all__'  # or list fields manually if you want
