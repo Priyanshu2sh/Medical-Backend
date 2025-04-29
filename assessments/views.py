@@ -691,4 +691,4 @@ class McqQuizResultHistoryView(APIView):
             return Response({"detail": "No results found for this user."}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = McqQuizResultSerializer(results, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_200_OK) #add
