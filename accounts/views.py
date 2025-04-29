@@ -45,7 +45,7 @@ class RegisterUser(APIView):
 
     def post(self, request):
         data = request.data
-        print(data)
+        # print(data)
         email = data.get('email')
         r_level = data.get('r_level')
 
