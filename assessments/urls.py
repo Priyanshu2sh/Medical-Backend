@@ -52,6 +52,6 @@ urlpatterns = [
     path('mcq-questions/type/<str:type>/',McqQuestionsByTypeView.as_view(), name='mcq-questions-by-type'),
     
     path('submit-mcq-quiz/', McqQuizResultAPIView.as_view(), name='submit-quiz'),
-    # path('mcq-result-history/<int:user_id>/', McqQuizResultHistoryView.as_view(), name='mcq-result-history'),
+    path('mcq-result-history/<int:user_id>/', McqQuizResultHistoryView.as_view(), name='mcq-result-history'),
 
 ]   
