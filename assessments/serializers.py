@@ -42,11 +42,28 @@ class NewQuizSerializer(serializers.ModelSerializer):
 
 class QuizResultSerializer(serializers.ModelSerializer):
     quiz_name = serializers.CharField(source='quiz.quiz_name')  # Fetch quiz name from the QuizName model
+    category_scores = serializers.SerializerMethodField()
 
     class Meta:
         model = QuizResult
-        fields = ['id', 'user_id', 'quiz', 'quiz_name', 'cat_1_marks', 'cat_2_marks', 'cat_3_marks', 'cat_4_marks', 'skip', 'result', 'date_taken']
+        fields = [
+            'id',
+            'user_id',
+            'quiz',
+            'quiz_name',
+            'category_scores',  # Replaces cat_1_marks to cat_4_marks
+            'skip',
+            'result',
+            'date_taken'
+        ]
 
+    def get_category_scores(self, obj):
+        return {
+            obj.quiz.category_1: obj.cat_1_marks,
+            obj.quiz.category_2: obj.cat_2_marks,
+            obj.quiz.category_3: obj.cat_3_marks,
+            obj.quiz.category_4: obj.cat_4_marks,
+        }
 
 class McqQuestionsSerializer(serializers.ModelSerializer):
     class Meta:

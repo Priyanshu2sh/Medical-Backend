@@ -45,14 +45,15 @@ class User(AbstractUser, PermissionsMixin):
     )
 
     role_choices = [
-        ("Admin", "Admin"),
-        ("Contributor", "Contributor"),
-        ("Student", "Student"),
+        ("Admin", "Admin"),           # no change
+        ("Edit", "Contributor"),      # changed display name
+        ("View", "Student"),          # changed display name
     ]
+
     
     # Adding additional columns
     email = models.EmailField(max_length=254, unique=True)
-    role = models.CharField(max_length=50, choices=role_choices, blank=True, null=True, default='Student')  # Role within Consumer category
+    role = models.CharField(max_length=50, choices=role_choices, blank=True, null=True, default='View')  # Role within Consumer category
     r_level = models.IntegerField(null=True, blank=True)
     email_otp = models.CharField(max_length=6, blank=True, null=True)  # Email OTP for Consumer users
     verified_at = models.DateTimeField(blank=True, null=True)  # Verification timestamp
