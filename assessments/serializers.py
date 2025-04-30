@@ -73,20 +73,14 @@ class McqQuestionsSerializer(serializers.ModelSerializer):
 
 
 class McqQuizSerializer(serializers.ModelSerializer):
-    # Accept a list of question IDs for assigning to the quiz
-    questions = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=McqQuestions.objects.all()
-    )
 
     class Meta:
         model = McqQuiz
-        fields = ['id', 'type', 'name', 'description', 'questions']
+        fields = ['id', 'type', 'name', 'description']
 
     def create(self, validated_data):
         questions = validated_data.pop('questions', [])
         quiz = McqQuiz.objects.create(**validated_data)
-        quiz.questions.set(questions)  # Set the M2M relationship
         return quiz
     
 
