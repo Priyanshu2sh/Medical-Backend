@@ -594,6 +594,8 @@ class McqQuestionsByTypeView(APIView):
         serializer = McqQuestionsSerializer(questions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
      
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 class McqQuizResultAPIView(APIView):
     def post(self, request):
@@ -601,6 +603,11 @@ class McqQuizResultAPIView(APIView):
         user_id = data.get('user_id')
         quiz_id = data.get('quiz_id')
         responses = data.get('response', [])
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_400_BAD_REQUEST)
 
         total_questions = len(responses)
         correct_count = 0
@@ -645,30 +652,35 @@ class McqQuizResultAPIView(APIView):
         score = correct_count
         attempted_questions = total_questions - skip_count
          # Save result in the database
-        quiz_result = McqQuizResult.objects.create(
-            user_id=user_id,
-            quiz_id=quiz_id,
-            score=score,
-            total_questions=total_questions
-        )
-        submitted_at = quiz_result.submitted_at
+       
 
         # Calculate performance
         if attempted_questions > 0:
             percentage = (score / attempted_questions) * 100
+
+            if percentage < 20:
+                performance = "Unsatisfactory"
+            elif 20 <= percentage < 40:
+                performance = "Average"
+            elif 40 <= percentage < 60:
+                performance = "Good"
+            elif 60 <= percentage < 80:
+                performance = "Excellent"
+            else:
+                performance = "Marvelous"
         else:
             percentage = 0
+            performance = "No Attempt"  # ✅ Always assign
 
-        if percentage < 20:
-            performance = "Unsatisfactory"
-        elif 20 <= percentage < 40:
-            performance = "Average"
-        elif 40 <= percentage < 60:
-            performance = "Good"
-        elif 60 <= percentage < 80:
-            performance = "Excellent"
-        else:
-            performance = "Marvelous"
+
+        quiz_result = McqQuizResult.objects.create(
+            user=user,
+            quiz_id=quiz_id,
+            score=score,
+            total_questions=total_questions,
+            performance = performance
+        )
+        submitted_at = quiz_result.submitted_at
 
         result = {
             'user_id': user_id,
