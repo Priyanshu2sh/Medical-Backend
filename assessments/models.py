@@ -142,7 +142,7 @@ class McqQuestions(models.Model):
 
 class McqQuizResult(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    quiz = models.ForeignKey(QuizName, on_delete=models.CASCADE)
+    quiz = models.ForeignKey(McqQuiz, on_delete=models.CASCADE)
     score = models.PositiveIntegerField()
     total_questions = models.PositiveIntegerField()
     skip_questions = models.PositiveIntegerField(default=0)  
