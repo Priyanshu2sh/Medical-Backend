@@ -99,13 +99,13 @@ class McqQuiz(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
 
-    question = models.ForeignKey(
-        'McqQuestions',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='quiz_reference'
-    )
+    # question = models.ForeignKey(
+    #     McqQuestions,
+    #     on_delete=models.CASCADE,
+    #     # null=True,
+    #     blank=True,
+    #     related_name='quiz_reference'
+    # )
 
     # questions = models.ManyToManyField('McqQuestions', related_name='quizzes')
 
