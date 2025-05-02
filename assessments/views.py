@@ -604,6 +604,8 @@ class McqQuizResultAPIView(APIView):
         quiz_id = data.get('quiz_id')
         responses = data.get('response', [])
 
+        # print("DEBUG: responses =", responses) 
+
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
@@ -678,6 +680,7 @@ class McqQuizResultAPIView(APIView):
             quiz_id=quiz_id,
             score=score,
             total_questions=total_questions,
+            skip_questions=skip_count,
             performance = performance
         )
         submitted_at = quiz_result.submitted_at
