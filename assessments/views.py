@@ -596,6 +596,7 @@ class McqQuestionsByTypeView(APIView):
      
 from django.contrib.auth import get_user_model
 User = get_user_model()
+import ast
 
 class McqQuizResultAPIView(APIView):
     def post(self, request):
@@ -629,20 +630,21 @@ class McqQuizResultAPIView(APIView):
             except McqQuestions.DoesNotExist:
                 continue
 
-            correct_answer = question.correct_ans
+            correct_answer_raw  = question.correct_ans
 
-            if isinstance(correct_answer, list):  # Multi-choice
-                if sorted(user_answer) == sorted(correct_answer):
-                    correct_count += 1
-                    is_correct = True
-                else:
-                    is_correct = False
-            else:  # Single choice
-                if user_answer == correct_answer:
-                    correct_count += 1
-                    is_correct = True
-                else:
-                    is_correct = False
+            try:
+                correct_answer = ast.literal_eval(correct_answer_raw)
+            except (ValueError, SyntaxError):
+                correct_answer = correct_answer_raw  # fallback
+
+            # Check if multiple-choice (list) or single-choice (string)
+            if isinstance(correct_answer, list):
+                is_correct = sorted(user_answer) == sorted(correct_answer)
+            else:
+                is_correct = user_answer == correct_answer
+
+            if is_correct:
+                correct_count += 1
 
             detailed_results.append({
                 'question_id': question_id,
