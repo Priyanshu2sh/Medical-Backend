@@ -5,7 +5,7 @@ from accounts.models import User
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult, McqQuiz, McqQuestions, McqQuizResult
-from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer, StatementOptionSerializer, QuizNameSerializer, NewQuizSerializer, QuizResultSerializer, McqQuizSerializer, McqQuestionsSerializer,McqQuizResultSerializer
+from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer, StatementOptionSerializer, QuizNameSerializer, NewQuizSerializer, QuizResultSerializer, McqQuizSerializer, McqQuestionsSerializer,McqQuizResultSerializer, McqQuizSimpleSerializer
 from rest_framework.exceptions import NotFound
 from django.db.models import Count
 
@@ -457,6 +457,12 @@ class McqQuizBytypeView(APIView):
         quizzes = McqQuiz.objects.filter(type=type)
         serializer = McqQuizSerializer(quizzes, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)    
+
+class TestMcqQuizView(APIView):
+    def get(self, request):
+        quizzes = McqQuiz.objects.annotate(question_count=Count('questions')).filter(question_count__gte=20)
+        serializer = McqQuizSimpleSerializer(quizzes, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class McqQuestionCreateView(APIView):

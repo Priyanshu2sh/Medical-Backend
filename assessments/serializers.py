@@ -86,7 +86,12 @@ class McqQuizSerializer(serializers.ModelSerializer):
         for question_data in questions_data:
             McqQuestions.objects.create(quiz=quiz, **question_data)
         return quiz
-    
+
+class McqQuizSimpleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = McqQuiz
+        fields = ['id', 'type', 'name', 'description']
+
 
 class McqQuizResultSerializer(serializers.ModelSerializer):
     class Meta:

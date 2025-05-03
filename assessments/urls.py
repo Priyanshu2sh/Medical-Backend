@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import CommonQuestionListView, ComputeTestResultView, StatementOptionView, TestHistoryView, QuizNameView, NewQuizView, QuizResultView, QuizResultHistoryView, TestQuizNameView, QuizAllQuestionView, QuizByTypeView, McqQuizCreateView, McqQuestionCreateView,  McqQuestionsByQuizForTestView, McqQuestionsByQuizIdView,McqQuestionsByTypeView, McqQuizBytypeView,McqQuizResultAPIView, McqQuizResultHistoryView
+from .views import CommonQuestionListView, ComputeTestResultView, StatementOptionView, TestHistoryView, QuizNameView, NewQuizView, QuizResultView, QuizResultHistoryView, TestQuizNameView, QuizAllQuestionView, QuizByTypeView, McqQuizCreateView, McqQuestionCreateView,  McqQuestionsByQuizForTestView, McqQuestionsByQuizIdView,McqQuestionsByTypeView, McqQuizBytypeView,McqQuizResultAPIView, McqQuizResultHistoryView, TestMcqQuizView
 
 urlpatterns = [
     path('question_add', CommonQuestionListView.as_view()),
@@ -38,6 +38,8 @@ urlpatterns = [
 
     path('mcq-quiz/', McqQuizCreateView.as_view(), name='create-quiz'),
     path('mcq-quizzes/', McqQuizCreateView.as_view(), name='get-mcq-quizzes'),
+    #for test get only 20 questions mcq quiz
+    path('test-mcq-quizzes/', TestMcqQuizView.as_view(), name='mcq-quiz-list'),
     path('mcq-quiz/type/<str:type>/', McqQuizBytypeView.as_view(), name='mcq-quiz-by-type'),
     # path('mcq-quizzes/<int:quiz_id>/', McqQuestionCreateView.as_view(), name='get-mcq-quiz'),
     path('quiz/delete/<int:quiz_id>/', McqQuizCreateView.as_view(), name='quiz-delete'),
