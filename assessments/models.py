@@ -146,7 +146,8 @@ class McqQuizResult(models.Model):
     score = models.PositiveIntegerField()
     total_questions = models.PositiveIntegerField()
     skip_questions = models.PositiveIntegerField(default=0)  
-    performance = models.CharField(max_length=50, blank=True, null=True)  # e.g., "Excellent", "Good", "Average", "Poor"
+    performance = models.CharField(max_length=50, blank=True, null=True)  # e.g., "Excellent", "Good", "Average", "Poor",
+    percentage = models.FloatField(null=True, blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

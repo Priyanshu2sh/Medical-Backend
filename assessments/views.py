@@ -689,7 +689,8 @@ class McqQuizResultAPIView(APIView):
             score=score,
             total_questions=total_questions,
             skip_questions=skip_count,
-            performance = performance
+            performance = performance,
+            percentage=percentage
         )
         submitted_at = quiz_result.submitted_at
 
@@ -701,6 +702,7 @@ class McqQuizResultAPIView(APIView):
             'skip_questions': skip_count,
             'submitted_at': submitted_at,
             'performance': performance,
+            'percentage': f"{percentage:.2f}%",
             # 'detailed_results': detailed_results
         }
         
