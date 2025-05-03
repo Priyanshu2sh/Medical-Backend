@@ -611,8 +611,6 @@ class McqQuizResultAPIView(APIView):
         quiz_id = data.get('quiz_id')
         responses = data.get('response', [])
 
-        # print("DEBUG: responses =", responses) 
-
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
@@ -621,6 +619,7 @@ class McqQuizResultAPIView(APIView):
         total_questions = len(responses)
         correct_count = 0
         skip_count = 0
+        score = 0  # Initialize score here
         detailed_results = []
 
         for item in responses:
@@ -636,7 +635,7 @@ class McqQuizResultAPIView(APIView):
             except McqQuestions.DoesNotExist:
                 continue
 
-            correct_answer_raw  = question.correct_ans
+            correct_answer_raw = question.correct_ans
 
             try:
                 correct_answer = ast.literal_eval(correct_answer_raw)
@@ -645,26 +644,41 @@ class McqQuizResultAPIView(APIView):
 
             # Check if multiple-choice (list) or single-choice (string)
             if isinstance(correct_answer, list):
-                is_correct = sorted(user_answer) == sorted(correct_answer)
+                user_set = set(user_answer)
+                correct_set = set(correct_answer)
+
+                correctly_marked = len(user_set & correct_set)
+                incorrectly_marked = len(user_set - correct_set)
+
+                if correctly_marked == len(correct_set) and incorrectly_marked == 0:
+                    is_correct = True
+                    partial_score = 1
+                    correct_count += 1  # Increment correct_count for fully correct answers
+                elif correctly_marked > 0 and incorrectly_marked == 0:
+                    is_correct = False
+                    partial_score = correctly_marked / len(correct_set)
+                else:
+                    is_correct = False
+                    partial_score = 0
             else:
                 is_correct = user_answer == correct_answer
+                partial_score = 1 if is_correct else 0
+                if is_correct:
+                    correct_count += 1  # Increment correct_count for correct answers
 
-            if is_correct:
-                correct_count += 1
+            score += partial_score  # Always add to score (including partial)
 
             detailed_results.append({
                 'question_id': question_id,
                 'user_answer': user_answer,
                 'correct_answer': correct_answer,
-                'is_correct': is_correct
+                'is_correct': is_correct,
+                'partial_score': round(partial_score, 2)
             })
 
-        score = correct_count
         attempted_questions = total_questions - skip_count
-         # Save result in the database
-       
 
-        # Calculate performance
+        # Calculate performance and percentage
         if attempted_questions > 0:
             percentage = (score / attempted_questions) * 100
 
@@ -680,8 +694,7 @@ class McqQuizResultAPIView(APIView):
                 performance = "Marvelous"
         else:
             percentage = 0
-            performance = "No Attempt"  # ✅ Always assign
-
+            performance = "No Attempt"
 
         quiz_result = McqQuizResult.objects.create(
             user=user,
@@ -689,10 +702,9 @@ class McqQuizResultAPIView(APIView):
             score=score,
             total_questions=total_questions,
             skip_questions=skip_count,
-            performance = performance,
+            performance=performance,
             percentage=percentage
         )
-        submitted_at = quiz_result.submitted_at
 
         result = {
             'user_id': user_id,
@@ -700,13 +712,14 @@ class McqQuizResultAPIView(APIView):
             'score': score,
             'total_questions': total_questions,
             'skip_questions': skip_count,
-            'submitted_at': submitted_at,
+            'submitted_at': quiz_result.submitted_at,
             'performance': performance,
             'percentage': f"{percentage:.2f}%",
-            # 'detailed_results': detailed_results
+            'detailed_results': detailed_results
         }
-        
+
         return Response(result, status=status.HTTP_200_OK)
+
 
 
 class McqQuizResultHistoryView(APIView):
