@@ -650,21 +650,21 @@ class McqQuizResultAPIView(APIView):
                 correctly_marked = len(user_set & correct_set)
                 incorrectly_marked = len(user_set - correct_set)
 
-                if correctly_marked == len(correct_set) and incorrectly_marked == 0:
-                    is_correct = True
-                    partial_score = 1
-                    correct_count += 1  # Increment correct_count for fully correct answers
-                elif correctly_marked > 0 and incorrectly_marked == 0:
-                    is_correct = False
-                    partial_score = correctly_marked / len(correct_set)
-                else:
-                    is_correct = False
-                    partial_score = 0
+                total_correct = len(correct_set)
+
+                # Apply partial scoring with penalty for incorrect selections
+                partial_score = (correctly_marked / total_correct) - (incorrectly_marked / total_correct)
+                partial_score = max(round(partial_score, 2), 0)
+
+                is_correct = partial_score == 1
+                if is_correct:
+                    correct_count += 1
             else:
                 is_correct = user_answer == correct_answer
                 partial_score = 1 if is_correct else 0
                 if is_correct:
-                    correct_count += 1  # Increment correct_count for correct answers
+                    correct_count += 1
+
 
             score += partial_score  # Always add to score (including partial)
 
