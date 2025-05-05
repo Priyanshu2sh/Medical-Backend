@@ -73,11 +73,11 @@ class McqQuestionsSerializer(serializers.ModelSerializer):
 
 
 class McqQuizSerializer(serializers.ModelSerializer):
-    questions = McqQuestionsSerializer(many=True)
+    questions = McqQuestionsSerializer(many=True, required=False)
 
     class Meta:
         model = McqQuiz
-        fields = ['id', 'type', 'name', 'description','questions']
+        fields = ['id', 'type', 'name', 'description', 'questions']
 
     def create(self, validated_data):
         questions_data = validated_data.pop('questions', [])
