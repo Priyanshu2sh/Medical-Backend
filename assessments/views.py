@@ -480,12 +480,19 @@ class McqQuestionCreateView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request):
-        questions = McqQuestions.objects.all()
-        serializer = McqQuestionsSerializer(questions, many=True)
-        return Response({
-            "message": "Questions retrieved successfully.",
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
+        try:
+            questions = McqQuestions.objects.all()
+            serializer = McqQuestionsSerializer(questions, many=True)
+            return Response({
+                "message": "Questions retrieved successfully.",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({
+                "message": "Failed to retrieve questions.",
+                "error": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def put(self, request, question_id):
         try:
