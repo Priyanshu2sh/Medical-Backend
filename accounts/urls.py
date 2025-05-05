@@ -11,4 +11,6 @@ urlpatterns = [
     path('users/<int:user_id>/toggle-active/', views.ToggleUserStatus.as_view(), name='toggle-user-status'),
 
     path('update-profile/', views.UpdateProfile.as_view(), name='update-profile'),
+
+    path('create-user/',views.AdminByCreateUser.as_view(), name='admin-create-user'),
 ]
