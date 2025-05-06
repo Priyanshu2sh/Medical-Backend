@@ -1,8 +1,10 @@
+# Use an official Python runtime as a parent image
 FROM python:3.10-slim
 
+# Set the working directory in the container
 WORKDIR /app
 
-# Install dependencies, including default-mysql-client
+# Install dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
     python3-dev \
@@ -11,15 +13,17 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
+# Copy the requirements file into the container
 COPY requirements.txt .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy the entire project to the container
 COPY . .
 
-# Expose the application port
-EXPOSE 8000
+# Expose port 8000 for Gunicorn
+EXPOSE 8001
 
-# Default command for the container
-CMD ["python3", "manage.py", "runserver", "0.0.0.0:8000"]
+# Command to run Gunicorn as the WSGI server
+CMD ["gunicorn", "--bind", "0.0.0.0:8001", "medical_books.wsgi:application"]
