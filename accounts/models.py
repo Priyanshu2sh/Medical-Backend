@@ -45,10 +45,11 @@ class User(AbstractUser, PermissionsMixin):
     )
 
     role_choices = [
-        ("Admin", "Admin"),
-        ("Edit", "Edit"),
-        ("View", "View"),
+        ("Admin", "Admin"),           # no change
+        ("Edit", "Contributor"),      # changed display name
+        ("View", "Student"),          # changed display name
     ]
+
     
     # Adding additional columns
     email = models.EmailField(max_length=254, unique=True)

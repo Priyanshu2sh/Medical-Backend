@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-oow7atl$%ct45x5z$*5crtsl9-@m6h*-#we@@=l(wk8ilf9b=#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['https://hsuite.prushal.com','*']
 
 
 # Application definition
@@ -53,6 +53,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'medical_books.middleware.SanitizeHostMiddleware',
+    # 'medical_books.SanitizeHostMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',

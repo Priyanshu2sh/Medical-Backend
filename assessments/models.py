@@ -62,10 +62,10 @@ class QuizName(models.Model):
 
 class NewQuiz(models.Model):
     question = models.TextField(null=True, blank=True)
-    option_1 = models.CharField(max_length=255)
-    option_2 = models.CharField(max_length=255)
-    option_3 = models.CharField(max_length=255)
-    option_4 = models.CharField(max_length=255)
+    option_1 = models.CharField(max_length=255, null=True, blank=True)
+    option_2 = models.CharField(max_length=255, null=True, blank=True)
+    option_3 = models.CharField(max_length=255, null=True, blank=True)
+    option_4 = models.CharField(max_length=255, null=True, blank=True)
     quiz = models.ForeignKey(QuizName, on_delete=models.CASCADE, related_name='questions')
 
     def __str__(self):
@@ -75,10 +75,10 @@ class NewQuiz(models.Model):
 class QuizResult(models.Model):
     user_id = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     quiz = models.ForeignKey(QuizName, on_delete=models.CASCADE)
-    cat_1_marks = models.IntegerField(default=0)
-    cat_2_marks = models.IntegerField(default=0)
-    cat_3_marks = models.IntegerField(default=0)
-    cat_4_marks = models.IntegerField(default=0)
+    cat_1_marks = models.IntegerField(default=0, null=True, blank=True)
+    cat_2_marks = models.IntegerField(default=0 ,null=True, blank=True)
+    cat_3_marks = models.IntegerField(default=0 ,null=True, blank=True)
+    cat_4_marks = models.IntegerField(default=0 ,null=True, blank=True)
     skip = models.IntegerField()
     result = models.CharField(max_length=100, blank=True, null=True)
     date_taken = models.DateTimeField(auto_now_add=True)
@@ -99,7 +99,15 @@ class McqQuiz(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
 
-    questions = models.ManyToManyField('McqQuestions', related_name='quizzes')
+    # question = models.ForeignKey(
+    #     McqQuestions,
+    #     on_delete=models.CASCADE,
+    #     # null=True,
+    #     blank=True,
+    #     related_name='quiz_reference'
+    # )
+
+    # questions = models.ManyToManyField('McqQuestions', related_name='quizzes')
 
     def __str__(self):
         return self.name
@@ -112,7 +120,7 @@ class McqQuestions(models.Model):
         (SINGLE_CHOICE, 'Single Choice'),
         (MULTIPLE_CHOICE, 'Multiple Choice'),
     ]
-
+    quiz = models.ForeignKey(McqQuiz, on_delete=models.CASCADE, related_name="questions", null=True, blank=True)
     question = models.TextField()
     options_1 = models.CharField(max_length=255)
     options_2 = models.CharField(max_length=255)
@@ -130,12 +138,16 @@ class McqQuestions(models.Model):
 
     def __str__(self):
         return self.question
-    
-class QuizResultss(models.Model):
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
-    quiz = models.ForeignKey(QuizName, on_delete=models.CASCADE)
-    score = models.PositiveIntegerField(default=0)
+
+
+class McqQuizResult(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    quiz = models.ForeignKey(McqQuiz, on_delete=models.CASCADE)
+    score = models.PositiveIntegerField()
     total_questions = models.PositiveIntegerField()
+    skip_questions = models.PositiveIntegerField(default=0)  
+    performance = models.CharField(max_length=50, blank=True, null=True)  # e.g., "Excellent", "Good", "Average", "Poor",
+    percentage = models.FloatField(null=True, blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

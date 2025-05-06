@@ -45,7 +45,7 @@ class RegisterUser(APIView):
 
     def post(self, request):
         data = request.data
-        print(data)
+        # print(data)
         email = data.get('email')
         r_level = data.get('r_level')
 
@@ -236,3 +236,47 @@ class ToggleUserStatus(APIView):
             }, status=200)
         except User.DoesNotExist:
             return Response({"error": "User not found."}, status=404)
+
+
+class AdminByCreateUser(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # Check if the requesting user is an admin
+        if request.user.role != 'Admin':
+            return Response({'error': 'Only admin users can perform this action'}, 
+                          status=status.HTTP_403_FORBIDDEN)
+
+        data = request.data.copy()  # Create mutable copy of request data
+        
+        # Set default role to 'View' if not provided
+        if 'role' not in data:
+            data['role'] = 'View'
+        
+        # Set username to email if username not provided
+        if 'username' not in data and 'email' in data:
+            data['username'] = data['email']
+
+        serializer = UserSerializer(data=data)
+        if serializer.is_valid():
+            # Create user with verified status
+            user = serializer.save()
+            user.verified_at = now()  # Mark as verified immediately
+            user.is_active = True     # Ensure user is active
+            user.save()
+            
+            return Response({
+                'message': 'User created successfully by admin',
+                'user_id': user.id,
+                'email': user.email,
+                'username': user.username,
+                'role': user.role,
+                'is_active': user.is_active,
+                'verified_at': user.verified_at
+            }, status=status.HTTP_201_CREATED)
+        
+        return Response({
+            'error': 'User creation failed',
+            'details': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)

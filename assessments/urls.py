@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import CommonQuestionListView, ComputeTestResultView, StatementOptionView, TestHistoryView, QuizNameView, NewQuizView, QuizResultView, QuizResultHistoryView, TestQuizNameView, QuizAllQuestionView, QuizByTypeView, McqQuizCreateView, McqQuestionCreateView,  McqQuestionsByQuizForTestView, McqQuestionsByQuizIdView,McqQuestionsByTypeView, McqQuizBytypeView
+from .views import CommonQuestionListView, ComputeTestResultView, StatementOptionView, TestHistoryView, QuizNameView, NewQuizView, QuizResultView, QuizResultHistoryView, TestQuizNameView, QuizAllQuestionView, QuizByTypeView, McqQuizCreateView, McqQuestionCreateView,  McqQuestionsByQuizForTestView, McqQuestionsByQuizIdView,McqQuestionsByTypeView, McqQuizBytypeView,McqQuizResultAPIView, McqQuizResultHistoryView, TestMcqQuizView
 
 urlpatterns = [
     path('question_add', CommonQuestionListView.as_view()),
@@ -38,11 +38,14 @@ urlpatterns = [
 
     path('mcq-quiz/', McqQuizCreateView.as_view(), name='create-quiz'),
     path('mcq-quizzes/', McqQuizCreateView.as_view(), name='get-mcq-quizzes'),
+    #for test get only 20 questions mcq quiz
+    path('test-mcq-quizzes/', TestMcqQuizView.as_view(), name='mcq-quiz-list'),
     path('mcq-quiz/type/<str:type>/', McqQuizBytypeView.as_view(), name='mcq-quiz-by-type'),
     # path('mcq-quizzes/<int:quiz_id>/', McqQuestionCreateView.as_view(), name='get-mcq-quiz'),
+    path('quiz/delete/<int:quiz_id>/', McqQuizCreateView.as_view(), name='quiz-delete'),
 
     path('mcq-question/', McqQuestionCreateView.as_view(), name='create-question'),
-    # path('mcq-questions/', McqQuestionCreateView.as_view(), name='mcq-questions-list'),     #for get all questions
+    path('mcq-questions/', McqQuestionCreateView.as_view(), name='mcq-questions-list'),     #for get all questions
     path('mcq-quiz/<int:quiz_id>/questions/', McqQuestionsByQuizForTestView.as_view(), name='mcq-questions-by-quiz'),
     path('mcq-questions/<int:question_id>/edit/', McqQuestionCreateView.as_view(), name='mcq-question-edit'),
     path('mcq-questions/<int:question_id>/delete/', McqQuestionCreateView.as_view(), name='mcq-question-delete'),
@@ -50,5 +53,7 @@ urlpatterns = [
     path('mcq-quiz/<int:quiz_id>/questions-all/', McqQuestionsByQuizIdView.as_view(), name='mcq-questions-by-quiz-id'),
     path('mcq-questions/type/<str:type>/',McqQuestionsByTypeView.as_view(), name='mcq-questions-by-type'),
     
+    path('submit-mcq-quiz/', McqQuizResultAPIView.as_view(), name='submit-quiz'),
+    path('mcq-result-history/<int:user_id>/', McqQuizResultHistoryView.as_view(), name='mcq-result-history'),
 
 ]   
