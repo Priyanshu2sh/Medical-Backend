@@ -62,10 +62,10 @@ class QuizName(models.Model):
 
 class NewQuiz(models.Model):
     question = models.TextField(null=True, blank=True)
-    option_1 = models.CharField(max_length=255)
-    option_2 = models.CharField(max_length=255)
-    option_3 = models.CharField(max_length=255)
-    option_4 = models.CharField(max_length=255)
+    option_1 = models.CharField(max_length=255, null=True, blank=True)
+    option_2 = models.CharField(max_length=255, null=True, blank=True)
+    option_3 = models.CharField(max_length=255, null=True, blank=True)
+    option_4 = models.CharField(max_length=255, null=True, blank=True)
     quiz = models.ForeignKey(QuizName, on_delete=models.CASCADE, related_name='questions')
 
     def __str__(self):

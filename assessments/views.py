@@ -55,6 +55,10 @@ class NewQuizView(APIView):
                 ("option_4", question.option_4),
             ]
 
+            # If quiz is statement-based, filter out null or empty options
+            if question.quiz.type == "statement-based":
+                options = [(key, val) for key, val in options if val not in [None, ""]]
+
             # Shuffle them
             random.shuffle(options)
 
@@ -72,7 +76,8 @@ class NewQuizView(APIView):
                     "category_1": question.quiz.category_1,
                     "category_2": question.quiz.category_2,
                     "category_3": question.quiz.category_3,
-                    "category_4": question.quiz.category_4
+                    "category_4": question.quiz.category_4,
+                    "type": question.quiz.type
                 }
             }
             formatted_questions.append(question_data)
