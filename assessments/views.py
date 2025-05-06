@@ -57,7 +57,7 @@ class NewQuizView(APIView):
 
             # If quiz is statement-based, filter out null or empty options
             if question.quiz.type == "statement-based":
-                options = [(key, val) for key, val in options if val not in [None, ""]]
+                options = [(key, val) for key, val in options if val and val.strip()]
 
             # Shuffle them
             random.shuffle(options)
