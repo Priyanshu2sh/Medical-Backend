@@ -26,5 +26,5 @@ COPY . .
 EXPOSE 8001
 
 # Command to run Gunicorn as the WSGI server
-# CMD ["gunicorn", "--bind", "0.0.0.0:8001", "medical_books.wsgi:application"]
-CMD ["python3" "manage.py" "runserver" "0.0.0.0:8001"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8001", "medical_books.wsgi:application"]
+# CMD ["python3" "manage.py" "runserver" "0.0.0.0:8001"]
