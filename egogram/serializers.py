@@ -16,7 +16,7 @@ class EgogramTestSerializer(serializers.ModelSerializer):
 
 class EgogramStatementSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.category', read_only=True)
-    test_name = serializers.CharField(source='test.test_name', read_only=True)
+    test_names = serializers.SerializerMethodField()
     
     class Meta:
         model = EgogramStatement
@@ -25,9 +25,10 @@ class EgogramStatementSerializer(serializers.ModelSerializer):
             'statement', 
             'category', 
             'category_name',
-            'test',
-            'test_name'
+            'test_names'
         ]
+    def get_test_names(self, obj):
+        return [test.test_name for test in obj.tests.all()]
 
     # def to_representation(self, instance):
     #     """Custom representation to show nested category/test details"""
@@ -38,8 +39,16 @@ class EgogramStatementSerializer(serializers.ModelSerializer):
 
     #quiz update
 
+# class EgogramTestCombinedSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = EgogramTestCombined
+#         fields = ['id', 'test_name', 'statements', 'created_at']
+#         read_only_fields = ['id', 'created_at']
+
+
 class ResultHistorySerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source='user.email', read_only=True)
+    final_result = EgogramCategorySerializer(read_only=True)
     
     class Meta:
         model = ResultHistory

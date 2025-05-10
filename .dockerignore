@@ -1,0 +1,27 @@
+# Ignore Python cache files
+*.pyc
+__pycache__/
+
+# Ignore virtual environments
+venv/
+.env/
+*.env
+
+# Ignore local SQLite database
+db.sqlite3
+
+# Ignore static and media files (if generated locally)
+staticfiles/
+media/
+
+# Ignore logs
+*.log
+logs/
+
+# Ignore IDE/editor-specific files
+.vscode/
+.idea/
+
+# Ignore Docker-related files (optional, if not needed in the image)
+.dockerignore
+Dockerfile

@@ -47,6 +47,7 @@ class StatementOption(models.Model):
 
 class QuizName(models.Model):
     quiz_name = models.CharField(max_length=100, null=True, blank=True, default="Unnamed Quiz")
+    quiz_description = models.TextField(null=True, blank=True)
     category_1 = models.CharField(max_length=100)
     category_2 = models.CharField(max_length=100)
     category_3 = models.CharField(max_length=100)

@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  # db:
+  #   image: postgres
+  #   environment:
+  #     POSTGRES_DB: ${POSTGRES_DB}
+  #     POSTGRES_USER: ${POSTGRES_USER}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  web:
+    build: .
+    command: sh -c "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    # command: gunicorn medical_books.wsgi:application --bind 0.0.0.0:8000
+    # command: bash -c "python manage.py migrate && gunicorn medical_books.wsgi:application --bind 0.0.0.0:8000" -------------------- use after 
+
+    volumes:
+      - .:/app
+      - static_volume:/app/static
+      - sqlite_data:/app/db
+    ports: 
+      - "8000:8000"
+    # depends_on:
+    #   db:
+    #     condition: service_healthy
+    # environment:
+    #   - DEBUG=${DEBUG}
+
+volumes:
+  # postgres_data:
+  static_volume:
+  sqlite_data:

@@ -17,18 +17,9 @@ class BooksAPIView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     def post(self, request):
-        # if request.user.is_anonymous:
-        #     return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
-        
+     
         # user = request.user  
         data = request.data
-        # print("Request Data:", request.data)
-        # print("User:", user)
-
-
-        # code_sets_data = data.pop('code_sets', []) 
-        
-        # data['created_by'] = user
         # data['updated_by'] = user
 
          # Ensure 'code_sets' is a list of dictionaries
