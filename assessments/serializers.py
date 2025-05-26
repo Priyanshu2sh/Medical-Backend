@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult, McqQuiz, McqQuestions, McqQuizResult
+from egogram.models import Category
+from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult, McqQuiz, McqQuestions, McqQuizResult, Steps, Treatment, Feedback
 
 class CommonQuestionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -27,6 +28,22 @@ class QuizNameSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuizName
         fields = '__all__'
+
+    # for create the opbejt on egogram category also 
+    def create(self, validated_data):
+        # Create QuizName object first
+        quiz = QuizName.objects.create(**validated_data)
+
+        # Create or update categories in egogram.Category table
+        for cat_field in ['category_1', 'category_2', 'category_3', 'category_4']:
+            cat_name = validated_data.get(cat_field)
+            if cat_name:
+                Category.objects.get_or_create(
+                    category=cat_name,
+                    defaults={'category_description':quiz.quiz_description}
+                )
+
+        return quiz
 
 
 class NewQuizSerializer(serializers.ModelSerializer):
@@ -97,3 +114,64 @@ class McqQuizResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = McqQuizResult
         fields = '__all__'  # or list fields manually if you want
+
+class StepsSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source='category.category', read_only=True)
+    class Meta:
+        model = Steps
+        fields = [
+            'id',
+            'type',
+            'category',
+            'category_name',
+            'step_1', 'step_2', 'step_3', 'step_4', 'step_5',
+            'step_6', 'step_7', 'step_8', 'step_9', 'step_10'
+        ]
+        
+        
+
+
+class TreatmentSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source='category.category', read_only=True)
+    class Meta:
+        model = Treatment
+        fields = [
+            'id', 'category', 'category_name', 'user', 'steps',
+            'type', 'current_step', 'created_at'
+        ]
+
+class FeedbackSerializer(serializers.ModelSerializer):
+    step_data = serializers.SerializerMethodField()
+    class Meta:
+        model = Feedback
+        fields = '__all__'
+
+    def validate_description(self, value):
+        if "steps" not in value or "note" not in value:
+            raise serializers.ValidationError("`description` must contain 'steps' and 'note' keys.")
+        return value
+    
+    def get_step_data(self, obj):
+        """
+        Optionally include step content if description['steps'] refers to a Steps.id.
+        """
+        step_ref = obj.description.get('steps')
+        if isinstance(step_ref, int):  # If it's an ID reference
+            try:
+                step_obj = Steps.objects.get(id=step_ref)
+                # Return all steps or one step; here returning all for reference
+                return {
+                    "step_1": step_obj.step_1,
+                    "step_2": step_obj.step_2,
+                    "step_3": step_obj.step_3,
+                    "step_4": step_obj.step_4,
+                    "step_5": step_obj.step_5,
+                    "step_6": step_obj.step_6,
+                    "step_7": step_obj.step_7,
+                    "step_8": step_obj.step_8,
+                    "step_9": step_obj.step_9,
+                    "step_10": step_obj.step_10,
+                }
+            except Steps.DoesNotExist:
+                return {"error": "Step reference not found"}
+        return step_ref  # Return actual JSON if not ID

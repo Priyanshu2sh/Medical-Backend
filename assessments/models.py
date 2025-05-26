@@ -1,5 +1,6 @@
 from django.db import models
-from accounts.models import User    
+from accounts.models import User  
+from egogram.models import Category  # Import the Category model  
 
 class CommonQuestion(models.Model):
     # id = models.AutoField(primary_key=True)
@@ -44,7 +45,7 @@ class StatementOption(models.Model):
         return f"Logical: {self.logical}, Analytical: {self.analytical}, Strategic: {self.strategic}, Thinking: {self.thinking}"
 
 
-
+#personality test 
 class QuizName(models.Model):
     quiz_name = models.CharField(max_length=100, null=True, blank=True, default="Unnamed Quiz")
     quiz_description = models.TextField(null=True, blank=True)
@@ -59,6 +60,8 @@ class QuizName(models.Model):
    
     def __str__(self):
         return f"{self.quiz_name} | {self.category_1} | {self.category_2} | {self.category_3} | {self.category_4}"
+    
+    # add column 
 
 
 class NewQuiz(models.Model):
@@ -88,6 +91,7 @@ class QuizResult(models.Model):
         return f"{self.user.username} - {self.quiz.quiz_name} - {self.score}"
     
 
+#MCQ based
 class McqQuiz(models.Model):
     SINGLE_CHOICE = 'single-choice'
     MULTIPLE_CHOICE = 'multiple-choice'
@@ -113,6 +117,7 @@ class McqQuiz(models.Model):
     def __str__(self):
         return self.name
     
+
 
 class McqQuestions(models.Model):
     SINGLE_CHOICE = 'single-choice'
@@ -153,3 +158,92 @@ class McqQuizResult(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.quiz.name} - {self.score}/{self.total_questions}"
+    
+
+
+# for treatment models
+class Steps(models.Model):
+    step_1 = models.JSONField(null=True, blank=True, default=dict)
+    step_2 = models.JSONField(null=True, blank=True, default=dict)
+    step_3 = models.JSONField(null=True, blank=True, default=dict)
+    step_4 = models.JSONField(null=True, blank=True, default=dict)
+    step_5 = models.JSONField(null=True, blank=True, default=dict)
+    step_6 = models.JSONField(null=True, blank=True, default=dict)
+    step_7 = models.JSONField(null=True, blank=True, default=dict)
+    step_8 = models.JSONField(null=True, blank=True, default=dict)
+    step_9 = models.JSONField(null=True, blank=True, default=dict)
+    step_10 = models.JSONField(null=True, blank=True, default=dict)
+
+    type = models.CharField(max_length=10, choices=[("increase", "Increase"), ("decrease", "Decrease")], null=True, blank=True)
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name='steps',
+        null=True, blank=True
+    )
+    
+    def __str__(self):
+        return f"Steps for Category: {self.category.category} - Type: {self.type}"
+    
+
+class Treatment(models.Model):
+    INCREASE = "increase"
+    DECREASE = "decrease"
+    TREATMENT_TYPE_CHOICES = [
+        (INCREASE, "Increase"),
+        (DECREASE, "Decrease"),
+    ]
+
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name="treatments"
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="treatments"
+    )
+    steps = models.ForeignKey(
+        Steps,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="treatments"
+    )
+    type = models.CharField(
+        max_length=10,
+        choices=TREATMENT_TYPE_CHOICES
+    )
+
+    current_step = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="Index (1-10) of step user is currently on."
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return (
+            f"Treatment #{self.id} • {self.user} • "
+            f"{self.category.category} • {self.type} • "
+            f"Step {self.current_step}"
+        )
+
+
+class Feedback(models.Model):
+    treatment = models.ForeignKey(Treatment, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    description = models.JSONField()          # Django ≥3.1
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "Feedback"
+        # optional uniqueness constraint:
+        # unique_together = ("treatment", "user")
+
+    def __str__(self):
+        return f"Feedback #{self.id} by {self.user} on Treatment {self.treatment_id}"

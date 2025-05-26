@@ -2,7 +2,7 @@ from django.db import models
 from accounts.models import User
 # Create your models here.
 
-class EgogramCategory(models.Model):
+class Category(models.Model):
     category = models.CharField(max_length=255)
     category_description = models.TextField(blank=True, null=True)
 
@@ -22,7 +22,7 @@ class EgogramTest(models.Model):
 class EgogramStatement(models.Model):
     statement = models.TextField()
     category = models.ForeignKey(
-        EgogramCategory, 
+        Category, 
         on_delete=models.CASCADE,
         related_name='category_items'
     )
@@ -46,7 +46,7 @@ class ResultHistory(models.Model):
         help_text="JSON storing statement IDs and their marks"
     )
     final_result = models.ForeignKey(
-        EgogramCategory,
+        Category,
         on_delete=models.SET_NULL,
         null=True,
         related_name="top_results"

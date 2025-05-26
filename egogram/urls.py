@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import EgogramTestCreateView, EgogramCategoryCreateView, EgogramStatementCreateView, EgogramStatementWithTestView, EgogramSTatementUpdateView,  EgogramStatementsWithTestView, AddStatementToTestView, EgogramResultView, UserResultHistoryView, EgogramTestGetForTest
+from .views import EgogramTestCreateView, CategoryCreateView, EgogramStatementCreateView, EgogramStatementWithTestView, EgogramSTatementUpdateView,  EgogramStatementsWithTestView, AddStatementToTestView, EgogramResultView, UserResultHistoryView, EgogramTestGetForTest
 
 urlpatterns = [
     path('tests/', EgogramTestCreateView.as_view(), name='egogram-test-create'),
@@ -7,8 +7,8 @@ urlpatterns = [
     path('egogram-test/',EgogramTestGetForTest.as_view(), name='egogram-test-for-test'),
 
 
-    path('categories/', EgogramCategoryCreateView.as_view(), name='egogram-category-create'),
-    path('all-categories/', EgogramCategoryCreateView.as_view(), name='all-egogram-categories'),
+    path('categories/', CategoryCreateView.as_view(), name='egogram-category-create'),
+    path('all-categories/', CategoryCreateView.as_view(), name='all-egogram-categories'),
 
 
     path('statements/', EgogramStatementCreateView.as_view(), name='egogram-statement-create'),
