@@ -5,15 +5,20 @@ from rest_framework.response import Response
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework import status
-from .models import User
-from .serializers import UserSerializer
+from .models import User, CounsellorProfile
+from .serializers import UserSerializer, CounsellorProfileSerializer
 from django.core.mail import send_mail
 from django.contrib.auth.hashers import check_password
+from django.contrib.auth.hashers import make_password
 from django.utils.timezone import now
 from datetime import datetime, timedelta
 from django.conf import settings
 import jwt
 from rest_framework.permissions import IsAuthenticated
+from django.utils.crypto import get_random_string
+from .utils import generate_password_reset_token
+from rest_framework_simplejwt.tokens import UntypedToken
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
 
 # Create your views here.
@@ -48,6 +53,14 @@ class RegisterUser(APIView):
         # print(data)
         email = data.get('email')
         r_level = data.get('r_level')
+        role = data.get('role')
+
+        # Validate role (optional)
+        if role not in dict(User.role_choices).keys():
+            return Response(
+                {'error': 'Invalid role'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         serializer = UserSerializer(data=data)
 
@@ -161,7 +174,45 @@ class LoginUser(APIView):
             'token': token,
             'user': user_data
         }, status=status.HTTP_200_OK)
+    
 
+class CompleteCounsellorProfile(APIView):
+    # permission_classes = [IsAuthenticated]
+    # authentication_classes = [JWTAuthentication]
+    permission_classes = []  # No authentication required
+
+    def post(self, request):
+        # Validate user_id exists
+        try:
+            user = User.objects.get(pk=request.data.get('user_id'))
+            if user.role != "Counsellor":
+                return Response(
+                    {"error": "Only users with counsellor role can create profiles"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check for existing profile
+        if hasattr(user, 'counsellor_profile'):
+            return Response(
+                {"error": "Profile already exists for this user"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Create profile
+        serializer = CounsellorProfileSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=user)
+            return Response({
+                "message": "Profile created successfully",
+                "data": serializer.data
+            }, status=status.HTTP_201_CREATED)
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ListUsers(APIView):
     # authentication_classes = [JWTAuthentication]  # Use your custom JWTAuthentication
@@ -280,3 +331,73 @@ class AdminByCreateUser(APIView):
             'error': 'User creation failed',
             'details': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SendResetOTPView(APIView):
+    def post(self, request):
+        email = request.data.get('email')
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        otp = random.randint(100000, 999999)
+        user.email_otp = otp
+        user.verified_at = None  # Clear previous verification
+        user.save()
+
+        send_mail(
+            'Password Reset OTP',
+            f'Your OTP for resetting your password is {otp}',
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            fail_silently=False
+        )
+
+        return Response({'message': 'OTP sent to email'})
+    
+
+class VerifyResetOTPView(APIView):
+    def post(self, request):
+        email = request.data.get('email')
+        otp = request.data.get('otp')
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if str(user.email_otp) != str(otp):
+            return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.verified_at = now()
+        user.email_otp = None  # Clear OTP after verification
+        user.save()
+
+        return Response({'message': 'OTP verified successfully'})
+
+
+class ResetPasswordView(APIView):
+    def post(self, request):
+        email = request.data.get('email')
+        new_password = request.data.get('new_password')
+        confirm_password = request.data.get('confirm_password')
+
+        if new_password != confirm_password:
+            return Response({'error': 'Passwords do not match'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if OTP was verified within last 10 minutes
+        if not user.verified_at or now() - user.verified_at > timedelta(minutes=10):
+            return Response({'error': 'OTP verification expired or not completed'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.password = make_password(new_password)
+        # DO NOT clear verified_at here so the user can log in
+        user.email_otp = None
+        user.save()
+
+        return Response({'message': 'Password reset successfully'})

@@ -4,10 +4,11 @@ from rest_framework import status
 from accounts.models import User
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult, McqQuiz, McqQuestions, McqQuizResult
-from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer, StatementOptionSerializer, QuizNameSerializer, NewQuizSerializer, QuizResultSerializer, McqQuizSerializer, McqQuestionsSerializer,McqQuizResultSerializer, McqQuizSimpleSerializer
+from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult, McqQuiz, McqQuestions, McqQuizResult, Steps, Feedback, Treatment
+from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer, StatementOptionSerializer, QuizNameSerializer, NewQuizSerializer, QuizResultSerializer, McqQuizSerializer, McqQuestionsSerializer,McqQuizResultSerializer, McqQuizSimpleSerializer, StepsSerializer, TreatmentSerializer  , FeedbackSerializer     
 from rest_framework.exceptions import NotFound
 from django.db.models import Count
+from egogram.models import Category
 
 class QuizNameView(APIView):
     def get(self, request):
@@ -744,3 +745,192 @@ class McqQuizResultHistoryView(APIView):
 
         serializer = McqQuizResultSerializer(results, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK) #add
+    
+
+class CreateStepsView(APIView):
+    def post(self, request):
+        category_id = request.data.get("category")  # FK id from egogram.Category
+        step_type   = request.data.get("type")      # "increase" or "decrease"
+
+        # ── Uniqueness check ─────────────────────────────
+        if category_id and step_type:
+            if Steps.objects.filter(category_id=category_id, type=step_type).exists():
+                return Response(
+                    {
+                        "error": (
+                            f"Steps for category={category_id} with "
+                            f"type='{step_type}' already exist."
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        # ── Create new Steps ─────────────────────────────
+        serializer = StepsSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {
+                    "message": "Steps created successfully",
+                    "data": serializer.data,
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class GetStepByStepIdView(APIView):
+    def get(self, request, step_id):
+        try:
+            step = Steps.objects.get(id=step_id)
+        except Steps.DoesNotExist:
+            return Response({"error": "Steps not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = StepsSerializer(step)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+class GetAllStepsView(APIView):
+    def get(self, request):
+        category_id = request.query_params.get("category")  # ?category=5
+        step_type   = request.query_params.get("type")      # ?type=increase
+
+        steps_qs = Steps.objects.all()
+
+        if category_id:
+            steps_qs = steps_qs.filter(category_id=category_id)
+        if step_type:
+            steps_qs = steps_qs.filter(type=step_type)
+
+        serializer = StepsSerializer(steps_qs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+
+class TreatmentCreateView(APIView):
+    def get(self, request):
+        user_id = request.query_params.get("user")  # ?user=3
+
+        treatments = Treatment.objects.all()
+        if user_id:
+            treatments = treatments.filter(user_id=user_id)
+
+        serializer = TreatmentSerializer(treatments, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+    def post(self, request):
+        user_id = request.data.get('user_id')
+        category_id = request.data.get('category_id')
+        treatment_type = request.data.get('type')  # 'increase' or 'decrease'
+
+        # Validate inputs
+        if not all([user_id, category_id, treatment_type]):
+            return Response({"error": "user_id, category_id, and type are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Fetch User
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Fetch Category
+        try:
+            category = Category.objects.get(id=category_id)
+        except Category.DoesNotExist:
+            return Response({"error": "Category not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Fetch Steps
+        try:
+            steps = Steps.objects.get(category=category, type=treatment_type)
+        except Steps.DoesNotExist:
+            return Response({"error": "Steps not found for given category and type."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Create Treatment
+        treatment = Treatment.objects.create(
+            user=user,
+            category=category,
+            type=treatment_type,
+            steps=steps,
+            current_step=1  # Default starting step
+        )
+
+        # Serialize response
+        treatment_data = TreatmentSerializer(treatment).data
+        steps_data = StepsSerializer(steps).data
+        steps = [steps_data]
+
+        return Response({
+            "message": "Treatment created successfully.",
+            "treatment": treatment_data,
+            "steps": steps_data,
+        }, status=status.HTTP_201_CREATED)
+    
+
+class TreatmentDetailByUser(APIView):
+    def get(self, request, user_id, treatment_id):
+        try:
+            treatment = Treatment.objects.get(id=treatment_id, user__id=user_id)
+            
+            # Check if current_step is 10, if yes, don't return it
+            if treatment.current_step == 10:
+                return Response({
+                    "message": "Treatment is completed and cannot be retrieved."
+                }, status=status.HTTP_404_NOT_FOUND)  # or you can use 204 No Content or 403 Forbidden if you want
+                
+            serializer = TreatmentSerializer(treatment)
+            return Response({
+                "message": "Treatment retrieved successfully",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        
+        except Treatment.DoesNotExist:
+            return Response({
+                "error": "Treatment not found for the given user."
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+
+class FeedbackView(APIView):
+    def post(self, request):
+        serializer = FeedbackSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Feedback submitted successfully.",
+                "data": serializer.data
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request):
+        feedbacks = Feedback.objects.all()
+        serializer = FeedbackSerializer(feedbacks, many=True)
+        return Response({
+            "message": "Feedback list retrieved successfully",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+    
+
+class UpdateCurrentStepAPIView(APIView):
+    def patch(self, request):
+        treatment_id = request.data.get("treatment_id")
+        step_id = request.data.get("step_id")
+
+        if not treatment_id or not step_id:
+            return Response(
+                {"error": "treatment_id and step_id are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            treatment = Treatment.objects.get(id=treatment_id)
+        except Treatment.DoesNotExist:
+            return Response(
+                {"error": "Treatment not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        treatment.current_step = step_id
+        treatment.save()
+
+        return Response(
+            {"message": "Current step updated successfully."},
+            status=status.HTTP_200_OK
+        )

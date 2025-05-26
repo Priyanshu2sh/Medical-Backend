@@ -3,6 +3,7 @@ from django.contrib.auth.models import Group, Permission, AbstractUser, Permissi
 from django.conf import settings
 from django.core.validators import RegexValidator
 from django.utils.timezone import now
+from django.contrib.auth.hashers import make_password
 
 # Create your models here.
 class UserManager(BaseUserManager):
@@ -48,6 +49,7 @@ class User(AbstractUser, PermissionsMixin):
         ("Admin", "Admin"),           # no change
         ("Edit", "Contributor"),      # changed display name
         ("View", "Student"),          # changed display name
+        ("Counsellor", "Counsellor"),  # New Role Added
     ]
 
     
@@ -71,3 +73,30 @@ class User(AbstractUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+    
+
+
+#--------------------- Counsellor registration table----------------
+class CounsellorProfile(models.Model):
+    user = models.OneToOneField(
+        User, 
+        on_delete=models.CASCADE,
+        related_name='counsellor_profile',
+        primary_key=True,
+        # null=True,
+        # blank=True
+    )
+    first_name = models.CharField(max_length=100)
+    middle_name = models.CharField(max_length=100, blank=True, null=True)
+    last_name = models.CharField(max_length=100)
+    educational_qualifications = models.TextField()
+    years_of_experience_months = models.PositiveIntegerField()
+    current_post = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}'s Profile"
+
+    class Meta:
+        verbose_name = "Counsellor Profile"
+        verbose_name_plural = "Counsellor Profiles"

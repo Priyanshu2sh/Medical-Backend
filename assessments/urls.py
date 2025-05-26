@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import CommonQuestionListView, ComputeTestResultView, StatementOptionView, TestHistoryView, QuizNameView, NewQuizView, QuizResultView, QuizResultHistoryView, TestQuizNameView, QuizAllQuestionView, QuizByTypeView, McqQuizCreateView, McqQuestionCreateView,  McqQuestionsByQuizForTestView, McqQuestionsByQuizIdView,McqQuestionsByTypeView, McqQuizBytypeView,McqQuizResultAPIView, McqQuizResultHistoryView, TestMcqQuizView
+from .views import CommonQuestionListView, ComputeTestResultView, StatementOptionView, TestHistoryView, QuizNameView, NewQuizView, QuizResultView, QuizResultHistoryView, TestQuizNameView, QuizAllQuestionView, QuizByTypeView, McqQuizCreateView, McqQuestionCreateView,  McqQuestionsByQuizForTestView, McqQuestionsByQuizIdView,McqQuestionsByTypeView, McqQuizBytypeView,McqQuizResultAPIView, McqQuizResultHistoryView, TestMcqQuizView, CreateStepsView, GetAllStepsView, TreatmentCreateView, FeedbackView, TreatmentDetailByUser,UpdateCurrentStepAPIView, GetStepByStepIdView
 
 urlpatterns = [
     path('question_add', CommonQuestionListView.as_view()),
@@ -14,6 +14,7 @@ urlpatterns = [
 
 
     path('quiz-name/', QuizNameView.as_view(), name="quiz-name" ),
+    
     path('quiz-name-get/', QuizNameView.as_view(), name="quiz-name-get" ),
     path('quiz/type/<str:quiz_type>/', QuizByTypeView.as_view(), name='quiz-by-type'),
 
@@ -55,5 +56,22 @@ urlpatterns = [
     
     path('submit-mcq-quiz/', McqQuizResultAPIView.as_view(), name='submit-quiz'),
     path('mcq-result-history/<int:user_id>/', McqQuizResultHistoryView.as_view(), name='mcq-result-history'),
+
+
+    # #treatment
+    path('create-steps/', CreateStepsView.as_view(), name='create-steps'),
+    path('steps/', GetAllStepsView.as_view(), name='get steps'),
+    path('steps/<int:step_id>/', GetStepByStepIdView.as_view(), name='step-detail'),
+
+
+    path('treatment/', TreatmentCreateView.as_view(), name='treatment-create'),
+    path('treatments/', TreatmentCreateView.as_view(), name='get-treatment'),
+    path('treatment/<int:user_id>/<int:treatment_id>/', TreatmentDetailByUser.as_view(), name='treatment-detail-by-user'),
+    path("treatment/update-step/", UpdateCurrentStepAPIView.as_view(), name="update-current-step"),
+
+
+
+    path('feedback/', FeedbackView.as_view(), name='create-feedback'),
+    path('feedbacks/', FeedbackView.as_view(), name='get-feedback')
 
 ]   

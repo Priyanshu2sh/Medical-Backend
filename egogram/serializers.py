@@ -1,10 +1,10 @@
 from rest_framework import serializers
-from .models import EgogramTest, EgogramCategory, EgogramStatement, ResultHistory
+from .models import EgogramTest, Category, EgogramStatement, ResultHistory
 
 
-class EgogramCategorySerializer(serializers.ModelSerializer):
+class CategorySerializer(serializers.ModelSerializer):
     class Meta:
-        model = EgogramCategory
+        model = Category
         fields = ['id', 'category', 'category_description']
         read_only_fields = ['id']
 
@@ -33,7 +33,7 @@ class EgogramStatementSerializer(serializers.ModelSerializer):
     # def to_representation(self, instance):
     #     """Custom representation to show nested category/test details"""
     #     response = super().to_representation(instance)
-    #     response['category'] = EgogramCategorySerializer(instance.category).data
+    #     response['category'] = CategorySerializer(instance.category).data
     #     response['test'] = EgogramTestSerializer(instance.test).data
     #     return response
 
@@ -48,7 +48,7 @@ class EgogramStatementSerializer(serializers.ModelSerializer):
 
 class ResultHistorySerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source='user.email', read_only=True)
-    final_result = EgogramCategorySerializer(read_only=True)
+    final_result = CategorySerializer(read_only=True)
     
     class Meta:
         model = ResultHistory

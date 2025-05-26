@@ -1,10 +1,10 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import EgogramTest, EgogramCategory, EgogramStatement, ResultHistory, User
+from .models import EgogramTest, Category, EgogramStatement, ResultHistory, User
 import random
 from collections import defaultdict
-from .serializers import EgogramTestSerializer, EgogramCategorySerializer, EgogramStatementSerializer, ResultHistorySerializer
+from .serializers import EgogramTestSerializer, CategorySerializer, EgogramStatementSerializer, ResultHistorySerializer
 from django.db.models import Count
 
 class EgogramTestCreateView(APIView):
@@ -44,12 +44,12 @@ class EgogramTestGetForTest(APIView):
         serializer = EgogramTestSerializer(tests, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-class EgogramCategoryCreateView(APIView):
+class CategoryCreateView(APIView):
     """
-    API endpoint to create new EgogramCategory instances
+    API endpoint to create new Category instances
     """
     def post(self, request, format=None):
-        serializer = EgogramCategorySerializer(data=request.data)
+        serializer = CategorySerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response({
@@ -63,8 +63,8 @@ class EgogramCategoryCreateView(APIView):
     
     def get(self, request):
         try:
-            categories = EgogramCategory.objects.all()
-            serializer = EgogramCategorySerializer(categories, many=True)
+            categories = Category.objects.all()
+            serializer = CategorySerializer(categories, many=True)
             
             return Response({
                 'success': True,
@@ -275,7 +275,7 @@ class EgogramResultView(APIView):
             # Find max category
             if category_marks:
                 top_category = max(category_marks.items(), key=lambda x: x[1])
-                final_result=EgogramCategory.objects.get(id=top_category[0])
+                final_result=Category.objects.get(id=top_category[0])
   # Only category_id as string
             else:
                 final_result = "0"
