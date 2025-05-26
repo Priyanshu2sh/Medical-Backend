@@ -22,9 +22,9 @@ class EgogramTest(models.Model):
 class EgogramStatement(models.Model):
     statement = models.TextField()
     category = models.ForeignKey(
-        Category, 
-        on_delete=models.CASCADE,
-        related_name='category_items'
+    'egogram.Category',  # use app_label.ModelName
+    on_delete=models.CASCADE,
+    related_name='category_items'
     )
     # test = models.ForeignKey(
     #     EgogramTest,
