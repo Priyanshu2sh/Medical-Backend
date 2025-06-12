@@ -337,30 +337,37 @@ class CodeReactionAPIView(APIView):
 
         reaction, created = CodeReaction.objects.get_or_create(user_id=user_id, description=description)
 
-        # Toggle Logic
+        # Toggle logic with un-react support
         if action == 'like':
             if reaction.like:
-                reaction_status = "like"  # Already liked
-                return Response({"message": "Reaction already updated"}, status=status.HTTP_200_OK)
+                # Unlike
+                reaction.like = False
+                description.like_count = max(0, description.like_count - 1)
+                reaction_status = "removed like"
             else:
+                # Like
                 reaction.like = True
                 description.like_count += 1
                 reaction_status = "like"
                 if reaction.dislike:
                     reaction.dislike = False
-                    description.dislike_count -= 1
+                    description.dislike_count = max(0, description.dislike_count - 1)
 
         elif action == 'dislike':
             if reaction.dislike:
-                reaction_status = "dislike"  # Already disliked
-                return Response({"message": "Reaction already updated"}, status=status.HTTP_200_OK)
+                # Remove dislike
+                reaction.dislike = False
+                description.dislike_count = max(0, description.dislike_count - 1)
+                reaction_status = "removed dislike"
             else:
+                # Dislike
                 reaction.dislike = True
                 description.dislike_count += 1
                 reaction_status = "dislike"
                 if reaction.like:
                     reaction.like = False
-                    description.like_count -= 1
+                    description.like_count = max(0, description.like_count - 1)
+
         else:
             return Response({"error": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
 

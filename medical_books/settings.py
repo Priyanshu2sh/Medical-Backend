@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-oow7atl$%ct45x5z$*5crtsl9-@m6h*-#we@@=l(wk8ilf9b=#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['https://hsuite.prushal.com','*']
+ALLOWED_HOSTS = ['https://hsuite.prushal.com','*','https://7121-103-211-60-173.ngrok-free.app']
 
 
 # Application definition
@@ -135,7 +135,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 

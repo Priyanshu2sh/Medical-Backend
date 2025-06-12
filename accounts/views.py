@@ -6,7 +6,7 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework import status
 from .models import User, CounsellorProfile
-from .serializers import UserSerializer, CounsellorProfileSerializer
+from .serializers import UserSerializer, CounsellorProfileSerializer, CounsellorProfileUpdateSerializer
 from django.core.mail import send_mail
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.hashers import make_password
@@ -19,6 +19,8 @@ from django.utils.crypto import get_random_string
 from .utils import generate_password_reset_token
 from rest_framework_simplejwt.tokens import UntypedToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework.exceptions import NotAuthenticated
+
 
 
 # Create your views here.
@@ -206,13 +208,37 @@ class CompleteCounsellorProfile(APIView):
         # Create profile
         serializer = CounsellorProfileSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(user=user)
+            serializer.save()
             return Response({
                 "message": "Profile created successfully",
                 "data": serializer.data
             }, status=status.HTTP_201_CREATED)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class UpdateCounsellorProfile(APIView):
+    permission_classes = []  # Add auth classes if needed
+
+    def put(self, request, user_id):
+        try:
+            user = User.objects.get(pk=user_id)
+            if not hasattr(user, 'counsellor_profile'):
+                return Response({"error": "Profile does not exist"}, status=404)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+
+        profile = user.counsellor_profile
+
+        serializer = CounsellorProfileUpdateSerializer(instance=profile, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Counsellor profile updated successfully",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
 class ListUsers(APIView):
     # authentication_classes = [JWTAuthentication]  # Use your custom JWTAuthentication
@@ -254,9 +280,11 @@ class UpdateProfile(APIView):
     permission_classes = [IsAuthenticated]
 
     def put(self, request):
-        user = request.user  # Authenticated user from JWT
+        user = request.user
 
-        # Allow only email and username update
+        if not user or not user.is_authenticated:
+            raise NotAuthenticated('Authentication credentials were not provided or are invalid.')
+
         data = {
             'email': request.data.get('email', user.email),
             'username': request.data.get('username', user.username),
@@ -269,7 +297,7 @@ class UpdateProfile(APIView):
                 'message': 'Profile updated successfully',
                 'user': serializer.data
             }, status=status.HTTP_200_OK)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
