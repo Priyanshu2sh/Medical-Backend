@@ -51,3 +51,6 @@ nohup.out
 
 # Ignore Excel files
 *.xlsx
+
+# Ignore ssh keys
+*.pem
