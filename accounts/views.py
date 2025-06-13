@@ -109,10 +109,12 @@ class RegisterUser(APIView):
                     fail_silently=False,
                 )
 
-                return Response({'message': 'OTP sent to your email',
-                                'user_id': user.id, 
-                                "r_level":r_level}, 
-                                status=status.HTTP_200_OK)
+                return Response({
+                    'message': 'OTP sent to your email',
+                    'user_id': user.id, 
+                    "r_level":r_level,
+                    'is_active': user.is_active 
+                },status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

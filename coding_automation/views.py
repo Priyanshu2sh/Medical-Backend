@@ -2,7 +2,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-from medical_processor.transcript import process_medical_file
+from medical_processor.transcript_db import process_medical_file
 import os
 import re
 import tempfile

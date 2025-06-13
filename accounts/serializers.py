@@ -27,6 +27,11 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # Hash the password using make_password
         validated_data['password'] = make_password(validated_data['password'])
+
+         # Set is_active to False if role is 'counsellor'
+        if validated_data.get('role') == 'counsellor':
+            validated_data['is_active'] = False
+            
         return super().create(validated_data)
     
 class CounsellorProfileSerializer(serializers.ModelSerializer):
