@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'books',
     'assessments', 
     'egogram', 
-    'coding_automation',
+    # 'coding_automation',
     'counsellor',
 
     'corsheaders',
