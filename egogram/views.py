@@ -60,7 +60,7 @@ class CategoryCreateView(APIView):
             'status': 'error',
             'errors': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
-    
+
     def get(self, request):
         try:
             categories = Category.objects.all()

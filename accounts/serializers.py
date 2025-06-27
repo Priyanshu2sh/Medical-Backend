@@ -27,6 +27,11 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # Hash the password using make_password
         validated_data['password'] = make_password(validated_data['password'])
+
+         # Set is_active to False if role is 'counsellor'
+        if validated_data.get('role') == 'counsellor':
+            validated_data['is_active'] = False
+            
         return super().create(validated_data)
     
 class CounsellorProfileSerializer(serializers.ModelSerializer):
@@ -40,8 +45,10 @@ class CounsellorProfileSerializer(serializers.ModelSerializer):
             'last_name',
             'educational_qualifications',
             'years_of_experience_months',
-            'current_post'
+            'current_post',
+            'photo',
         ]
+
         extra_kwargs = {
             'user': {'read_only': True}
         }
@@ -50,3 +57,25 @@ class CounsellorProfileSerializer(serializers.ModelSerializer):
         if not User.objects.filter(pk=value, role="Counsellor").exists():
             raise serializers.ValidationError("User is not a counsellor")
         return value
+    
+    def create(self, validated_data):
+        user_id = validated_data.pop('user_id')
+        user = User.objects.get(pk=user_id)
+        profile = CounsellorProfile.objects.create(user=user, **validated_data)
+        return profile
+
+
+class CounsellorProfileUpdateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = CounsellorProfile
+        fields = [
+            'first_name',
+            'middle_name',
+            'last_name',
+            'educational_qualifications',
+            'years_of_experience_months',
+            'current_post',
+            'photo',
+        ]
+

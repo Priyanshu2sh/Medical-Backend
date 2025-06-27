@@ -77,18 +77,24 @@ class User(AbstractUser, PermissionsMixin):
 
 
 #--------------------- Counsellor registration table----------------
+
+def get_default_user():
+    return User.objects.get(id=1)
+
 class CounsellorProfile(models.Model):
     user = models.OneToOneField(
         User, 
         on_delete=models.CASCADE,
         related_name='counsellor_profile',
         primary_key=True,
+        default=get_default_user
         # null=True,
         # blank=True
     )
     first_name = models.CharField(max_length=100)
     middle_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100)
+    photo = models.ImageField(upload_to='counsellor_photos/', blank=True, null=True)
     educational_qualifications = models.TextField()
     years_of_experience_months = models.PositiveIntegerField()
     current_post = models.CharField(max_length=255)
