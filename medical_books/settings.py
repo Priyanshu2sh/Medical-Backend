@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from dotenv import load_dotenv
 from pathlib import Path
 import os
+from corsheaders.defaults import default_headers
+
 
 load_dotenv()
 
@@ -31,6 +33,11 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['https://hsuite.prushal.com','*','https://7121-103-211-60-173.ngrok-free.app']
 
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'Hospital-Id',
+]
+
+
 
 # Application definition
 
@@ -49,8 +56,9 @@ INSTALLED_APPS = [
     'books',
     'assessments', 
     'egogram', 
-    'coding_automation',
+    # 'coding_automation',
     'counsellor',
+    'hospital_management',
 
     'corsheaders',
 ]

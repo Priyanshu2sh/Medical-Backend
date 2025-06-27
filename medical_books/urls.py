@@ -27,8 +27,8 @@ urlpatterns = [
     path('api/books/', include('books.urls')),
     path('api/assessments/', include('assessments.urls')),
     path('api/egogram/', include('egogram.urls')),
-    path('api/coding/', include('coding_automation.urls')),
     path('api/counsellor/', include('counsellor.urls')),
+    path('api/hospital/', include('hospital_management.urls')),
        
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

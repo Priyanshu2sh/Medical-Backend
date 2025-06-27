@@ -17,5 +17,5 @@ RUN pip install -r requirements.txt
 COPY . /app/
 
 # 6. Default command to run
-CMD ["gunicorn", "your_project_name.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "medical_books.wsgi:application", "--bind", "0.0.0.0:8000"]
 
