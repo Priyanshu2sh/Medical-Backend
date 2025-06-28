@@ -77,19 +77,24 @@ class HMSUserLoginAPIView(APIView):
         if not check_password(password, hms_user.password):
             return Response({"error": "Invalid password."}, status=status.HTTP_401_UNAUTHORIZED)
 
-        serializer = HMSUserSerializer(hms_user)
+        user_data = HMSUserSerializer(hms_user).data
+
+        hospital_data = None
+        if hms_user.hospital:
+            hospital_data = HospitalSerializer(hms_user.hospital).data
         
-        response_data = {
+        return Response({
             "message": "Login successful.",
-            "hms_user": serializer.data
-        }
+            "hms_user": user_data,
+            "hospital": hospital_data  # Full hospital data
+        }, status=status.HTTP_200_OK)
 
-        # If user is not admin, include hospital data
-        if hms_user.designation != "admin" and hms_user.hospital:
-            from .serializers import HospitalSerializer  # Import only if not already
-            response_data["hospital"] = HospitalSerializer(hms_user.hospital).data
+        # # If user is not admin, include hospital data
+        # if hms_user.designation != "admin" and hms_user.hospital:
+        #     from .serializers import HospitalSerializer  # Import only if not already
+        #     response_data["hospital"] = HospitalSerializer(hms_user.hospital).data
 
-        return Response(response_data, status=status.HTTP_200_OK)
+        # return Response(response_data, status=status.HTTP_200_OK)
     
 class GetAllUsersAPIView(APIView):
     def get(self, request):
