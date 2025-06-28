@@ -1,10 +1,14 @@
-# Use an official Python runtime as a parent image
-FROM python:3.10-slim
+# Use an official multi-arch Python base image for ARM64 support
+FROM --platform=linux/arm64 python:3.10-slim
 
-# Set the working directory in the container
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Set working directory
 WORKDIR /app
 
-# Install dependencies
+# Install system dependencies for MySQL/MariaDB and Python build
 RUN apt-get update && apt-get install -y \
     gcc \
     python3-dev \
@@ -13,18 +17,15 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements file into the container
+# Copy requirements and install Python packages
 COPY requirements.txt .
-
-# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the entire project to the container
+# Copy the project files
 COPY . .
 
-# Expose port 8000 for Gunicorn
+# Expose the application port
 EXPOSE 8001
 
-# Command to run Gunicorn as the WSGI server
+# Run Gunicorn server
 CMD ["gunicorn", "--bind", "0.0.0.0:8001", "medical_books.wsgi:application"]
-# CMD ["python3" "manage.py" "runserver" "0.0.0.0:8001"]
