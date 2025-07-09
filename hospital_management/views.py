@@ -1,11 +1,13 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.utils import timezone
 # from rest_framework import status as http_status
 from rest_framework import status
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.hashers import make_password
-from .models import Hospital, HMSUser, PatientDetails, Findings, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, ClinicalNotes, Medicine, Certificate, Attachments, OPD
-from .serializers import HospitalSerializer, HMSUserSerializer, PatientDetailsSerializer, FindingsSerializer, AllergiesSerializer, PatientFamilyHistorySerializer, PatientPastHospitalHistorySerializer, MedicalHistoryCurrentHospitalSerializer, DiseasesSerializer, OngoingMedicationSerializer, MedicineSerializer, ClinicalNotesSerializer, CertificateSerializer, AttachmentsSerializer, OPDSerializer
+from .models import Hospital, HMSUser, PatientDetails, Findings, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, ClinicalNotes, Medicine, Certificate, Attachments, OPD, PrescriptionItem, Prescription, BillPerticulars, Bill
+
+from .serializers import HospitalSerializer, HMSUserSerializer, PatientDetailsSerializer, FindingsSerializer, AllergiesSerializer, PatientFamilyHistorySerializer, PatientPastHospitalHistorySerializer, MedicalHistoryCurrentHospitalSerializer, DiseasesSerializer, OngoingMedicationSerializer, MedicineSerializer, ClinicalNotesSerializer, CertificateSerializer, AttachmentsSerializer, OPDSerializer, PrescriptionSerializer, PrescriptionItemSerializer, BillPerticularsSerializer, BillSerializer
 
 
 class HospitalCreateAPIView(APIView):
@@ -84,7 +86,7 @@ class HMSUserLoginAPIView(APIView):
             hospital_data = HospitalSerializer(hms_user.hospital).data
         
         return Response({
-            "message": "Login successful.",
+            "message": "Login successfully.",
             "hms_user": user_data,
             "hospital": hospital_data  # Full hospital data
         }, status=status.HTTP_200_OK)
@@ -268,7 +270,6 @@ class AllergiesByPatientAPIView(APIView):
                 "hospital": HospitalSerializer(hospital).data
             }
         }, status=status.HTTP_200_OK)
-
 
 class PatientDetailsCreateAPIView(APIView):
     def post(self, request):
@@ -858,12 +859,12 @@ class MedicineCreateAPIView(APIView):
         except Hospital.DoesNotExist:
             return Response({"error": "Invalid Hospital ID."}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = MedicineSerializer(data=request.data)
+        serializer = MedicineSerializer(data=request.data, many=True)
         if serializer.is_valid():
             medicine = serializer.save(hospital=hospital)
             return Response({
                 "message": "Medicine added successfully",
-                "data": MedicineSerializer(medicine).data,
+                "data": MedicineSerializer(medicine, many=True).data,
                 "hospital": HospitalSerializer(hospital).data
             }, status=status.HTTP_201_CREATED)
 
@@ -987,7 +988,6 @@ class PatientFullHistoryAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
         
-
 class AttachmentsCreateAPIView(APIView):
     def post(self, request):
         hospital_id = request.headers.get("Hospital-Id")
@@ -1160,3 +1160,380 @@ class OPDListByDoctorAPIView(APIView):
             "data": serializer.data,
             "hospital": HospitalSerializer(hospital).data
         }, status=status.HTTP_200_OK)
+
+
+class PrescriptionCreateAPIView(APIView):
+    def post(self, request):
+        hospital_id = request.headers.get("Hospital-Id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid Hospital ID."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data
+        required_fields = ['patient', 'user', 'items']
+        for field in required_fields:
+            if field not in data:
+                return Response({"error": f"{field} is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            patient = PatientDetails.objects.get(id=data['patient'], hospital=hospital)
+        except PatientDetails.DoesNotExist:
+            return Response({"error": "Patient not found in this hospital."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            doctor = HMSUser.objects.get(id=data['user'], designation='doctor', hospital=hospital)
+        except HMSUser.DoesNotExist:
+            return Response({"error": "Doctor not found or invalid designation."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Create Prescription
+        prescription = Prescription.objects.create(
+            patient=patient,
+            user=doctor,
+            notes=data.get('notes', ''),
+            hospital=hospital
+        )
+
+        # Create Prescription Items
+        for item in data['items']:
+            PrescriptionItem.objects.create(
+                prescription=prescription,
+                medicine_name=item['medicine_name'],
+                dosage=item['dosage'],
+                duration_days=item['duration_days'],
+                instruction=item.get('instruction', '')
+            )
+
+        # Serialize
+        prescription_data = PrescriptionSerializer(prescription).data
+        items_data = PrescriptionItemSerializer(prescription.items.all(), many=True).data
+
+        return Response({
+            "message": "Prescription created successfully.",
+            "prescription": prescription_data,
+            "items": items_data,
+            "hospital": HospitalSerializer(hospital).data
+        }, status=status.HTTP_201_CREATED)
+    
+
+    def get(self, request):
+        hospital_id = request.headers.get("Hospital-Id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid Hospital ID."}, status=status.HTTP_404_NOT_FOUND)
+
+        prescriptions = Prescription.objects.filter(hospital=hospital).order_by('-date_issued')
+        serializer = PrescriptionSerializer(prescriptions, many=True)
+        return Response({
+            "message": "Prescriptions fetched successfully.",
+            "data": serializer.data,
+            "hospital": {
+                "id": hospital.id,
+                "hospital_id": hospital.hospital_id,
+                "name": hospital.name,
+                "address": hospital.address,
+                "owner": hospital.owner,
+                "contact": hospital.contact,
+            }
+        }, status=status.HTTP_200_OK)
+
+class AllMedicineNamesAPIView(APIView):
+    def get(self, request):
+        hospital_id = request.headers.get("Hospital-Id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid Hospital ID."}, status=status.HTTP_404_NOT_FOUND)
+
+        medicines = PrescriptionItem.objects.filter(
+            prescription__hospital=hospital
+        ).values_list('medicine_name', flat=True).distinct()
+
+        return Response({
+            "message": "Medicine names fetched successfully.",
+            "hospital": {
+                "id": hospital.id,
+                "hospital_id": hospital.hospital_id,
+                "name": hospital.name,
+                "address": hospital.address,
+                "owner": hospital.owner,
+                "contact": hospital.contact,
+            },
+            "medicine_names": list(medicines)
+        }, status=status.HTTP_200_OK)
+
+class GetPrescriptionsByPatientAPIView(APIView):
+    def get(self, request, patient_id):
+        hospital_id = request.headers.get("Hospital-Id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid Hospital ID."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            patient = PatientDetails.objects.get(id=patient_id, hospital=hospital)
+        except PatientDetails.DoesNotExist:
+            return Response({"error": "Patient not found in this hospital."}, status=status.HTTP_404_NOT_FOUND)
+
+        prescriptions = Prescription.objects.filter(patient=patient, hospital=hospital).order_by('-date_issued')
+
+        if not prescriptions.exists():
+            return Response({"message": "No prescriptions found for this patient."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = PrescriptionSerializer(prescriptions, many=True)
+        return Response({
+            "message": "Prescriptions fetched successfully.",
+            "data": serializer.data,
+            "hospital": {
+                "id": hospital.id,
+                "hospital_id": hospital.hospital_id,
+                "name": hospital.name,
+                "address": hospital.address,
+                "owner": hospital.owner,
+                "contact": hospital.contact,
+            },
+        }, status=status.HTTP_200_OK)
+
+class BillperticularsCreateAPIView(APIView):
+    def post(self, request):
+        hospital_id = request.headers.get("Hospital-Id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid Hospital ID."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data.copy()
+        data['hospital'] = hospital.id
+
+        serializer = BillPerticularsSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Bill particular created successfully.",
+                "data": serializer.data,
+                "hospital": HospitalSerializer(hospital).data
+            }, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request):
+        hospital_id = request.headers.get("Hospital-Id")
+
+        if hospital_id:
+            try:
+                hospital = Hospital.objects.get(hospital_id=hospital_id)
+            except Hospital.DoesNotExist:
+                return Response({"error": "Invalid Hospital ID."}, status=status.HTTP_404_NOT_FOUND)
+
+            particulars = BillPerticulars.objects.filter(hospital=hospital, bill__isnull=True)
+        else:
+            particulars = BillPerticulars.objects.all()
+
+        serializer = BillPerticularsSerializer(particulars, many=True)
+        return Response({
+            "message": "Bill particulars fetched successfully.",
+            "data": serializer.data,
+            "hospital": HospitalSerializer(hospital).data
+        }, status=status.HTTP_200_OK)
+
+class BillPerticularsUpdateAPIView(APIView):
+    def put(self, request, pk):
+        hospital_id = request.headers.get("Hospital-Id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid Hospital ID."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            particular = BillPerticulars.objects.get(id=pk, hospital=hospital)
+        except BillPerticulars.DoesNotExist:
+            return Response({"error": "Bill particular not found in this hospital."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = BillPerticularsSerializer(particular, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Bill particular updated successfully.",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class BillPerticularsDeleteAPIView(APIView):
+    def delete(self, request, pk):
+        hospital_id = request.headers.get("Hospital-Id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid Hospital ID."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            particular = BillPerticulars.objects.get(id=pk, hospital=hospital)
+        except BillPerticulars.DoesNotExist:
+            return Response({"error": "Bill particular not found in this hospital."}, status=status.HTTP_404_NOT_FOUND)
+
+        particular.delete()
+        return Response({"message": "Bill particular deleted successfully."}, status=status.HTTP_200_OK)
+
+class BillCreateAPIView(APIView):
+    def post(self, request):
+        hospital_id = request.headers.get("Hospital-Id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid Hospital ID."}, status=status.HTTP_404_NOT_FOUND)
+
+        patient_id = request.data.get("patient_id")
+        perticulars_data = request.data.get("perticulars")
+
+        if not patient_id or not perticulars_data:
+            return Response({"error": "Both patient_id and perticulars are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            patient = PatientDetails.objects.get(id=patient_id, hospital=hospital)
+        except PatientDetails.DoesNotExist:
+            return Response({"error": "Patient not found in this hospital."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Calculate total amount
+        total_amount = sum(item.get("amount", 0) for item in perticulars_data)
+
+        # Create Bill
+        bill = Bill.objects.create(
+            patient=patient,
+            amount=total_amount,
+            hospital=hospital,
+            status='unpaid'
+        )
+
+        # Create Bill perticulars
+        for item in perticulars_data:
+            BillPerticulars.objects.create(
+                name=item['name'],
+                amount=item['amount'],
+                description=item.get('description'),
+                bill=bill,
+                hospital=hospital
+            )
+
+        # Fetch perticulars from DB again (to include auto fields like id/date)
+        perticulars = BillPerticulars.objects.filter(bill=bill)
+
+        return Response({
+            "message": "Bill created successfully",
+            "bill": BillSerializer(bill).data,
+            "perticulars": BillPerticularsSerializer(perticulars, many=True).data,
+            "hospital": HospitalSerializer(hospital).data
+        }, status=status.HTTP_201_CREATED)
+
+class GetBillsByPatientAPIView(APIView):
+    def get(self, request, patient_id):
+        hospital_id = request.headers.get("Hospital-Id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid Hospital ID."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            patient = PatientDetails.objects.get(id=patient_id, hospital=hospital)
+        except PatientDetails.DoesNotExist:
+            return Response({"error": "Patient not found in this hospital."}, status=status.HTTP_404_NOT_FOUND)
+
+        bills = Bill.objects.filter(patient=patient, hospital=hospital).order_by('-date')
+
+        if not bills.exists():
+            return Response({"message": "No bills found for this patient."}, status=status.HTTP_404_NOT_FOUND)
+
+        response_data = []
+        for bill in bills:
+            perticulars = BillPerticulars.objects.filter(bill=bill)
+            response_data.append({
+                "bill_id": bill.id,
+                "total_amount": bill.amount,
+                "status": bill.status,
+                "payment_mode": bill.payment_mode,
+                "payment_date_time": bill.payment_date_time,
+                "paid_amount": bill.paid_amount,
+                "date": bill.date,
+                "perticulars": BillPerticularsSerializer(perticulars, many=True).data,
+                
+            })
+
+        return Response({
+            "message": "Bills fetched successfully.",
+            "data": response_data,
+            "hospital": HospitalSerializer(hospital).data
+        }, status=status.HTTP_200_OK)
+
+class UpdateBillPaymentAPIView(APIView):
+    def patch(self, request, pk):
+        hospital_id = request.headers.get("Hospital-Id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid Hospital ID."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            bill = Bill.objects.get(pk=pk, hospital=hospital)
+        except Bill.DoesNotExist:
+            return Response({"error": "Bill not found for this hospital."}, status=status.HTTP_404_NOT_FOUND)
+
+        if bill.status == 'paid':
+            return Response({"error": "This bill is already marked as paid and cannot be changed."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        payment_mode = request.data.get('payment_mode')
+        new_status = request.data.get('status')
+
+        if not payment_mode or new_status != 'paid':
+            return Response({"error": "Both payment_mode and status='paid' are required."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Update bill details
+        bill.payment_mode = payment_mode
+        bill.status = 'paid'
+        bill.payment_date_time = timezone.now()
+        bill.paid_amount = bill.amount
+        bill.save()
+
+        return Response({
+            "message": "Bill payment updated successfully.",
+            "bill_id": bill.id,
+            "status": bill.status,
+            "payment_mode": bill.payment_mode,
+            "payment_date": bill.payment_date_time,
+            "paid_amount": bill.paid_amount,
+            "hospital": HospitalSerializer(hospital).data
+        }, status=status.HTTP_200_OK)
+    
+    
