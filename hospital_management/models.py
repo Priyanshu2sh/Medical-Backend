@@ -355,3 +355,65 @@ class OPD(models.Model):
 
     def __str__(self):
         return f"OPD Visit - {self.patient.name} on {self.date}"
+
+
+class Prescription(models.Model):
+    patient = models.ForeignKey(PatientDetails, on_delete=models.CASCADE, related_name="prescriptions")
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey('HMSUser', limit_choices_to={'designation': 'doctor'}, on_delete=models.CASCADE)
+    date_issued = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Prescription for {self.patient} by {self.user} on {self.date_issued.date()}"
+
+
+class PrescriptionItem(models.Model):
+    prescription = models.ForeignKey(Prescription, on_delete=models.CASCADE, related_name="items")
+    medicine_name = models.CharField(max_length=255)
+    dosage = models.CharField(max_length=100)
+    duration_days = models.IntegerField()
+    instruction = models.TextField()
+
+    def __str__(self):
+        return self.medicine_name
+
+
+class Bill(models.Model):
+    STATUS_CHOICES = [
+        ('unpaid', 'Unpaid'),
+        ('paid', 'Paid')
+    ]
+
+    PAYMENT_MODE_CHOICES = [
+        ('cash', 'Cash'),
+        ('upi', 'UPI'),
+        ('card', 'Card'),
+        ('netbanking', 'Net Banking'),
+        ('other', 'Other'),
+    ]
+
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name='bills')
+    patient = models.ForeignKey(PatientDetails, on_delete=models.CASCADE)
+    date = models.DateField(auto_now_add=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='unpaid')
+    payment_mode = models.CharField(max_length=50,choices=PAYMENT_MODE_CHOICES, null=True, blank=True)
+    payment_date_time = models.DateTimeField(null=True, blank=True)
+    paid_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"Bill #{self.id} - {self.patient}"
+
+
+class BillPerticulars(models.Model):
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name='bill_perticulars')
+    bill = models.ForeignKey(Bill, on_delete=models.CASCADE, related_name='bill_perticulars',blank=True, null=True)
+    name = models.CharField(max_length=255)
+    # quantity = models.PositiveIntegerField(default=1)
+    amount = models.DecimalField(max_digits=10, decimal_places=2,blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    date_time = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} - ₹{self.amount}"

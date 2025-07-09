@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 from datetime import date
-from .models import Hospital, PatientDetails, Findings, HMSUser, Allergies, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, Medicine, ClinicalNotes, Certificate, Attachments, OPD
+from .models import Hospital, PatientDetails, Findings, HMSUser, Allergies, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, Medicine, ClinicalNotes, Certificate, Attachments, OPD, PrescriptionItem, Prescription, BillPerticulars, Bill
+
 
 class HospitalSerializer(serializers.ModelSerializer):
     class Meta:
@@ -153,4 +154,30 @@ class AttachmentsSerializer(serializers.ModelSerializer):
 class OPDSerializer(serializers.ModelSerializer):
     class Meta:
         model = OPD
+        fields = '__all__'
+
+
+class PrescriptionItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PrescriptionItem
+        fields = '__all__'
+
+
+class PrescriptionSerializer(serializers.ModelSerializer):
+    items = PrescriptionItemSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Prescription
+        fields = '__all__'
+
+class BillPerticularsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BillPerticulars
+        fields = ['id', 'name', 'amount', 'description', 'date_time', 'bill', 'hospital']
+
+
+class BillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Bill
+        # fields = ['id', 'date', 'amount', 'patient', 'status', 'payment_mode', 'payment_date_time', 'paid_amount', 'hospital']
         fields = '__all__'

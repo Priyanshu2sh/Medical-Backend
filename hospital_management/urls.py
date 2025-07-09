@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import HospitalCreateAPIView, HMSUserRegisterAPIView, HMSUserLoginAPIView, PatientDetailsCreateAPIView, PatientDetailsUpdateAPIView, FindingsCreateAPIView, FindingsByPatientAPIView, FindingsUpdateAPIView, AllergiesCreateAPIView, AllergiesByPatientAPIView, AdminAddUserAPIView, GetAllUsersAPIView, PatientFamilyHistoryCreateView, PatientFamilyHistoryByPatientView, HMSUserUpdateView, HMSUserDeleteView, HMSUserStatusUpdateView, CreatePastHospitalHistoryAPIView, GetPastHospitalHistoryByPatientAPIView, MedicalHistoryCurrentHospitalCreateAPIView, MedicalHistoryCurrentHospitalByPatientAPIView, DiseasesCreateAPIView, DiseasesByPatientAPIView, UpdateDiseaseStatusAPIView, OngoingMedicationCreateAPIView, OngoingMedicationByPatientAPIView, MedicineCreateAPIView, ClinicalNotesCreateAPIView, ClinicalNotesByPatientAPIView, CertificateCreateAPIView, PatientFullHistoryAPIView, AttachmentsCreateAPIView, OPDCreateAPIView, OPDStatusUpdateAPIView, OPDListByDoctorAPIView
+from .views import HospitalCreateAPIView, HMSUserRegisterAPIView, HMSUserLoginAPIView, PatientDetailsCreateAPIView, PatientDetailsUpdateAPIView, FindingsCreateAPIView, FindingsByPatientAPIView, FindingsUpdateAPIView, AllergiesCreateAPIView, AllergiesByPatientAPIView, AdminAddUserAPIView, GetAllUsersAPIView, PatientFamilyHistoryCreateView, PatientFamilyHistoryByPatientView, HMSUserUpdateView, HMSUserDeleteView, HMSUserStatusUpdateView, CreatePastHospitalHistoryAPIView, GetPastHospitalHistoryByPatientAPIView, MedicalHistoryCurrentHospitalCreateAPIView, MedicalHistoryCurrentHospitalByPatientAPIView, DiseasesCreateAPIView, DiseasesByPatientAPIView, UpdateDiseaseStatusAPIView, OngoingMedicationCreateAPIView, OngoingMedicationByPatientAPIView, MedicineCreateAPIView, ClinicalNotesCreateAPIView, ClinicalNotesByPatientAPIView, CertificateCreateAPIView, PatientFullHistoryAPIView, AttachmentsCreateAPIView, OPDCreateAPIView, OPDStatusUpdateAPIView, OPDListByDoctorAPIView, PrescriptionCreateAPIView, AllMedicineNamesAPIView, GetPrescriptionsByPatientAPIView, BillperticularsCreateAPIView, BillCreateAPIView, GetBillsByPatientAPIView, UpdateBillPaymentAPIView, BillPerticularsDeleteAPIView, BillPerticularsUpdateAPIView
 
 urlpatterns = [
 
@@ -59,6 +59,19 @@ urlpatterns = [
     path('opds/', OPDCreateAPIView.as_view(), name='get-all-opd'),
     path('opd/<int:opd_id>/update-status/', OPDStatusUpdateAPIView.as_view(), name='update-opd-status'),
     path('opd/doctor/<int:doctor_id>/', OPDListByDoctorAPIView.as_view(), name='opd-by-doctor'),
+
+    path('prescription/', PrescriptionCreateAPIView.as_view(), name='create-prescription'),
+    path('prescriptions/', PrescriptionCreateAPIView.as_view(), name='get-all-prescriptions'),
+    path('prescription/medicine-names/', AllMedicineNamesAPIView.as_view(), name='all-medicine-names'),
+    path('prescription/patient/<int:patient_id>/', GetPrescriptionsByPatientAPIView.as_view(), name='get-prescriptions-by-patient'),
+
+    path('bill-perticulars/', BillperticularsCreateAPIView.as_view(), name='bill-perticulars-create'),
+    path('bill/particulars/', BillperticularsCreateAPIView.as_view(), name='bill-particulars-list'),
+    path('bill-particulars/delete/<int:pk>/', BillPerticularsDeleteAPIView.as_view(), name='delete-bill-particular'),
+    path('bill-perticulars/update/<int:pk>/', BillPerticularsUpdateAPIView.as_view(), name='update-bill-perticular'),
+    path('bill/', BillCreateAPIView.as_view(), name='bill-create'),
+    path('bill/patient/<int:patient_id>/', GetBillsByPatientAPIView.as_view(), name='get-bills-by-patient'),
+    path('bill/<int:pk>/update-payment/', UpdateBillPaymentAPIView.as_view(), name='update-bill-payment'),
 
 
 ]
