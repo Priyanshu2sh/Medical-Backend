@@ -54,3 +54,4 @@ nohup.out
 
 # Ignore ssh keys
 *.pem
+Prushal_django.pem
