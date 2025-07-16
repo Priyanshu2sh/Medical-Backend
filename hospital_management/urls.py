@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import HospitalCreateAPIView, HMSUserRegisterAPIView, HMSUserLoginAPIView, PatientDetailsCreateAPIView, PatientDetailsUpdateAPIView, FindingsCreateAPIView, FindingsByPatientAPIView, FindingsUpdateAPIView, AllergiesCreateAPIView, AllergiesByPatientAPIView, AdminAddUserAPIView, GetAllUsersAPIView, PatientFamilyHistoryCreateView, PatientFamilyHistoryByPatientView, HMSUserUpdateView, HMSUserDeleteView, HMSUserStatusUpdateView, CreatePastHospitalHistoryAPIView, GetPastHospitalHistoryByPatientAPIView, MedicalHistoryCurrentHospitalCreateAPIView, MedicalHistoryCurrentHospitalByPatientAPIView, DiseasesCreateAPIView, DiseasesByPatientAPIView, UpdateDiseaseStatusAPIView, OngoingMedicationCreateAPIView, OngoingMedicationByPatientAPIView, MedicineCreateAPIView, ClinicalNotesCreateAPIView, ClinicalNotesByPatientAPIView, CertificateCreateAPIView, PatientFullHistoryAPIView, AttachmentsCreateAPIView, OPDCreateAPIView, OPDStatusUpdateAPIView, OPDListByDoctorAPIView, PrescriptionCreateAPIView, AllMedicineNamesAPIView, GetPrescriptionsByPatientAPIView, BillperticularsCreateAPIView, BillCreateAPIView, GetBillsByPatientAPIView, UpdateBillPaymentAPIView, BillPerticularsDeleteAPIView, BillPerticularsUpdateAPIView
+from .views import HospitalCreateAPIView, HMSUserRegisterAPIView, HMSUserLoginAPIView, PatientDetailsCreateAPIView, PatientDetailsUpdateAPIView, FindingsCreateAPIView, FindingsByPatientAPIView, FindingsUpdateAPIView, AllergiesCreateAPIView, AllergiesByPatientAPIView, AdminAddUserAPIView, GetAllUsersAPIView, PatientFamilyHistoryCreateView, PatientFamilyHistoryByPatientView, HMSUserUpdateView, HMSUserDeleteView, HMSUserStatusUpdateView, CreatePastHospitalHistoryAPIView, GetPastHospitalHistoryByPatientAPIView, MedicalHistoryCurrentHospitalCreateAPIView, MedicalHistoryCurrentHospitalByPatientAPIView, DiseasesCreateAPIView, DiseasesByPatientAPIView, UpdateDiseaseStatusAPIView, OngoingMedicationCreateAPIView, OngoingMedicationByPatientAPIView, MedicineCreateAPIView, ClinicalNotesCreateAPIView, ClinicalNotesByPatientAPIView, CertificateCreateAPIView, PatientFullHistoryAPIView, AttachmentsCreateAPIView, OPDCreateAPIView, OPDStatusUpdateAPIView, OPDListByDoctorAPIView, PrescriptionCreateAPIView, AllMedicineNamesAPIView, GetPrescriptionsByPatientAPIView, BillperticularsCreateAPIView, BillCreateAPIView, GetBillsByPatientAPIView, UpdateBillPaymentAPIView, BillPerticularsDeleteAPIView, BillPerticularsUpdateAPIView, InvoiceListAPIView, WardCreateAPIView, BedCreateAPIView,IPDCreateAPIView, GetBedsByWardAPIView, UpdateBedStatusAPIView, GetAllWardsAPIView, IPDTransferDoctorAPIView, IPDByDoctorAPIView, WardWithBedsAPIView
 
 urlpatterns = [
 
@@ -70,8 +70,25 @@ urlpatterns = [
     path('bill-particulars/delete/<int:pk>/', BillPerticularsDeleteAPIView.as_view(), name='delete-bill-particular'),
     path('bill-perticulars/update/<int:pk>/', BillPerticularsUpdateAPIView.as_view(), name='update-bill-perticular'),
     path('bill/', BillCreateAPIView.as_view(), name='bill-create'),
+    path('bills/all/', BillCreateAPIView.as_view(), name='get-all-bills'),
     path('bill/patient/<int:patient_id>/', GetBillsByPatientAPIView.as_view(), name='get-bills-by-patient'),
     path('bill/<int:pk>/update-payment/', UpdateBillPaymentAPIView.as_view(), name='update-bill-payment'),
+    path('invoices/', InvoiceListAPIView.as_view(), name='invoice-list'),
+    
+    # IPD
+    path('wards/', WardCreateAPIView.as_view(), name='create-ward'),
+    path('wards_all/', GetAllWardsAPIView.as_view(), name='get-all-wards'),
 
+
+    path('bed/', BedCreateAPIView.as_view(), name='create-bed'),
+    path('beds/ward/<int:ward_id>/', GetBedsByWardAPIView.as_view(), name='get-beds-by-ward'),
+    path('beds/<int:bed_id>/update-status/', UpdateBedStatusAPIView.as_view(), name="update-bed-status"),
+    path('wards-beds/', WardWithBedsAPIView.as_view(), name='wards-beds'),
+
+
+    path("ipd/", IPDCreateAPIView.as_view(), name="ipd-create"),
+    path('ipd-list/', IPDCreateAPIView.as_view(), name='ipd-list'),
+    path('ipd/by-doctor/<int:doctor_id>/', IPDByDoctorAPIView.as_view(), name='ipd-by-doctor'),
+    path('ipd/<int:pk>/transfer-doctor/', IPDTransferDoctorAPIView.as_view(), name='ipd-update-doctor'),
 
 ]

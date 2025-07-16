@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 from datetime import date
-from .models import Hospital, PatientDetails, Findings, HMSUser, Allergies, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, Medicine, ClinicalNotes, Certificate, Attachments, OPD, PrescriptionItem, Prescription, BillPerticulars, Bill
+from .models import Hospital, PatientDetails, Findings, HMSUser, Allergies, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, Medicine, ClinicalNotes, Certificate, Attachments, OPD, PrescriptionItem, Prescription, BillPerticulars, Bill, Invoice, Bed, Ward, IPD, DoctorHistory
 
 
 class HospitalSerializer(serializers.ModelSerializer):
@@ -173,7 +173,7 @@ class PrescriptionSerializer(serializers.ModelSerializer):
 class BillPerticularsSerializer(serializers.ModelSerializer):
     class Meta:
         model = BillPerticulars
-        fields = ['id', 'name', 'amount', 'description', 'date_time', 'bill', 'hospital']
+        fields = ['id', 'name', 'amount', 'description', 'date_time', 'bill', 'type','hospital']
 
 
 class BillSerializer(serializers.ModelSerializer):
@@ -181,3 +181,53 @@ class BillSerializer(serializers.ModelSerializer):
         model = Bill
         # fields = ['id', 'date', 'amount', 'patient', 'status', 'payment_mode', 'payment_date_time', 'paid_amount', 'hospital']
         fields = '__all__'
+
+class InvoiceSerializer(serializers.ModelSerializer):
+    bill = BillSerializer(read_only=True)
+    patient = PatientDetailsSerializer(read_only=True)
+    class Meta:
+        model = Invoice
+        fields = '__all__'
+        read_only_fields = ['id', 'date']
+        
+
+class BedSerializer(serializers.ModelSerializer):
+    # patient = serializers.PrimaryKeyRelatedField(queryset=PatientDetails.objects.all(), required=False, allow_null=True)
+
+    class Meta:
+        model = Bed
+        fields = '__all__'
+        read_only_fields = ['hospital']
+
+class WardSerializer(serializers.ModelSerializer):
+    beds = BedSerializer(many=True, read_only=True)
+    class Meta:
+        model = Ward
+        fields = '__all__'
+        read_only_fields = ['hospital']
+
+class DoctorHistorySerializer(serializers.ModelSerializer):
+    # doctor_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DoctorHistory
+        fields = '__all__'
+
+    # def get_doctor_name(self, obj):
+    #     return obj.doctor.get_full_name() if obj.doctor else None
+
+class IPDSerializer(serializers.ModelSerializer):
+    patient = serializers.PrimaryKeyRelatedField(
+        queryset=PatientDetails.objects.all()
+    )
+    patient_details = PatientDetailsSerializer(source='patient', read_only=True)
+    admitted_doctor = serializers.PrimaryKeyRelatedField(queryset=HMSUser.objects.filter(designation='doctor'), required=False, allow_null=True)
+    active_doctor = serializers.PrimaryKeyRelatedField(queryset=HMSUser.objects.filter(designation='doctor'), required=False, allow_null=True)
+    transfer_doctor = serializers.PrimaryKeyRelatedField(queryset=HMSUser.objects.filter(designation='doctor'), required=False, allow_null=True)
+    bed = serializers.PrimaryKeyRelatedField(queryset=Bed.objects.all(), required=False, allow_null=True)
+    doctor_history = DoctorHistorySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = IPD
+        fields = '__all__'
+        read_only_fields = ['hospital', 'entry_date']
