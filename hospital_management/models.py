@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models import JSONField
+from django.utils import timezone
 
 # Create your models here.
 class Hospital(models.Model):
@@ -75,6 +77,7 @@ class PatientDetails(models.Model):
     medical_history = models.TextField(null=True, blank=True)
     visit_count = models.IntegerField(default=0)
     date = models.DateTimeField(auto_now_add=True)
+    is_active_patient = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)  # Save first to generate `id`
@@ -88,11 +91,12 @@ class PatientDetails(models.Model):
         return self.full_name
  #Last visite field remaining.
 
-#finding
+#finding1
 class Findings(models.Model):
     hospital = models.ForeignKey('Hospital', on_delete=models.CASCADE, related_name='findings', null=True, blank=True)
     patient = models.ForeignKey('PatientDetails', on_delete=models.CASCADE, related_name='findings')
-    date = models.DateField(auto_now_add=True)
+    date = models.DateTimeField(auto_now_add=True, null=True, blank=True)  # Safe now
+    note = models.TextField(null=True, blank=True)
 
     # Vitals
     temperature = models.FloatField(null=True, blank=True)
@@ -109,7 +113,7 @@ class Findings(models.Model):
     rbc = models.CharField(max_length=100, null=True, blank=True)
 
     def __str__(self):
-        return f"Findings of {self.patient.full_name} on {self.date}"
+        return f"Findings of {self.patient.full_name}"
     
 
 class PatientFamilyHistory(models.Model):
@@ -410,6 +414,7 @@ class BillPerticulars(models.Model):
     hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name='bill_perticulars')
     bill = models.ForeignKey(Bill, on_delete=models.CASCADE, related_name='bill_perticulars',blank=True, null=True)
     name = models.CharField(max_length=255)
+    type = models.CharField(max_length=50, null=True, blank=True)
     # quantity = models.PositiveIntegerField(default=1)
     amount = models.DecimalField(max_digits=10, decimal_places=2,blank=True, null=True)
     description = models.TextField(blank=True, null=True)
@@ -417,3 +422,108 @@ class BillPerticulars(models.Model):
 
     def __str__(self):
         return f"{self.name} - ₹{self.amount}"
+
+
+class Invoice(models.Model):
+    bill = models.ForeignKey(Bill, on_delete=models.CASCADE, related_name="invoices")
+    patient = models.ForeignKey(PatientDetails, on_delete=models.CASCADE, related_name="invoices", null=True, blank=True)
+    date = models.DateTimeField(auto_now_add=True)
+    payment_mode = models.CharField(max_length=20)
+    paid_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    particulars = JSONField(default=list, blank=True) 
+
+    def __str__(self):
+        return f"Invoice #{self.id} for Bill #{self.bill.id}"
+
+class Ward(models.Model):
+    WARD_TYPE_CHOICES = [
+        ('general', 'General'),
+        ('icu', 'ICU'),
+        ('private', 'Private'),
+        ('semi-private', 'Semi-Private'),
+    ]
+
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name='wards')
+    ward_name = models.CharField(max_length=100, null=True, blank=True)
+    floor = models.IntegerField(null=True, blank=True)
+    building = models.CharField(max_length=100, null=True, blank=True)
+    ward_type = models.CharField(max_length=50, choices=WARD_TYPE_CHOICES, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.ward_name} - {self.floor} - {self.building}"
+
+
+class Bed(models.Model):
+    BED_TYPE_CHOICES = [
+        ('standard', 'Standard'),
+        ('electric', 'Electric'),
+        ('manual', 'Manual'),
+        ('icu', 'ICU'),
+        
+    ]
+
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name="beds", null=True, blank=True)
+    ward = models.ForeignKey(Ward, on_delete=models.CASCADE, related_name="beds")
+    bed_no = models.CharField(max_length=20)
+    patient = models.ForeignKey(PatientDetails, on_delete=models.SET_NULL, null=True, blank=True, related_name="beds")
+    occupied_date = models.DateTimeField(null=True, blank=True)
+    is_occupied = models.BooleanField(default=False)
+    description = models.TextField(null=True, blank=True)
+    bed_type = models.CharField(max_length=50, choices=BED_TYPE_CHOICES)
+
+    def __str__(self):
+        return f"Bed {self.bed_no} in {self.ward.ward_name}"
+    
+class IPD(models.Model):
+    PATIENT_TYPE_CHOICES = [
+        ('normal', 'Normal'),
+        ('mlc', 'MLC'),
+    ]
+     
+    MLC_TYPE_CHOICES = [
+        ('accident', 'Accident'),
+        ('assault', 'Assault'),
+        ('burn', 'Burn'),
+        ('poisoning', 'Poisoning'),
+        ('suicide', 'Suicide'),
+        ('other', 'Other'),
+    ]
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name='ipds')
+    patient = models.ForeignKey(PatientDetails, on_delete=models.CASCADE, related_name="ipds")
+    admitted_doctor = models.ForeignKey(HMSUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="admitted_ipds")
+    active_doctor = models.ForeignKey(HMSUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="active_ipds")
+    transfer_doctor = models.ForeignKey(HMSUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="transferred_ipds")
+
+    bill_category = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    department = models.CharField(max_length=100)
+    bed = models.ForeignKey(Bed, on_delete=models.SET_NULL, null=True, blank=True, related_name="ipd_beds")
+    entry_date = models.DateTimeField(auto_now_add=True) 
+    admit_date = models.DateTimeField(null=True, blank=True)  
+    # Patient Type
+    patient_type = models.CharField(max_length=10, choices=PATIENT_TYPE_CHOICES, default='normal')
+    # Guardian Details
+    guardian_relation = models.CharField(max_length=50, null=True, blank=True)
+    guardian_name = models.CharField(max_length=100, null=True, blank=True)
+    guardian_mobile = models.CharField(max_length=15, null=True, blank=True)
+    # MLC Info
+    police_station_name = models.CharField(max_length=100, null=True, blank=True)
+    informed_on = models.DateField(null=True, blank=True)
+    injury_details = models.TextField(null=True, blank=True)
+    incident_datetime = models.DateTimeField(null=True, blank=True)
+    mlc_number = models.CharField(max_length=50, null=True, blank=True)
+    mlc_type = models.CharField(max_length=20, choices=MLC_TYPE_CHOICES, null=True, blank=True)
+
+    def __str__(self):
+        return f"IPD #{self.id} for {self.patient.full_name}"
+
+
+class DoctorHistory(models.Model):
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name='doctor_histories', null=True, blank=True)
+    ipd = models.ForeignKey(IPD, on_delete=models.CASCADE, related_name='doctor_history', null=True, blank=True)
+    doctor = models.ForeignKey(HMSUser, on_delete=models.CASCADE, limit_choices_to={'designation': 'doctor'}, null=True, blank=True)
+    from_date = models.DateTimeField(null=True, blank=True)
+    till_date = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Doctor {self.doctor.get_full_name()} (IPD #{self.ipd.id})"
