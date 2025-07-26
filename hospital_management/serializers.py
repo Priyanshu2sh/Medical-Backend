@@ -1,27 +1,57 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
+import random
 from datetime import date
-from .models import Hospital, PatientDetails, Findings, HMSUser, Allergies, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, Medicine, ClinicalNotes, Certificate, Attachments, OPD, PrescriptionItem, Prescription, BillPerticulars, Bill, Invoice, Bed, Ward, IPD, DoctorHistory
+from .models import Hospital, PatientDetails, Findings, HMSUser, Allergies, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, Medicine, ClinicalNotes, Certificate, Attachments, OPD, PrescriptionItem, Prescription, BillPerticulars, Bill, Invoice, Bed, Ward, IPD, DoctorHistory, Supplier, PharmacyBill, PharmacyMedicine, MedicineStock, StockTransaction, PatientAppointment, DoctorTimetable, LabReport
 
 
 class HospitalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Hospital
-        fields = ['id', 'hospital_id', 'name', 'address', 'owner', 'contact']
+        fields = ['id', 'hospital_id', 'name', 'address', 'owner', 'contact', 'logo']
 
 class HMSUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = HMSUser
-        fields = ['id', 'name', 'designation', 'email', 'password','is_active', 'hospital']
+        fields = ['id', 'name', 'designation', 'email', 'password','is_active', 'hospital','pharmacist_type', 'is_doctor_available']
         extra_kwargs = {
             'password': {'write_only': True},
             'hospital': {'read_only': True} 
         }
+    def validate(self, attrs):
+        designation = attrs.get('designation')
+        pharmacist_type = attrs.get('pharmacist_type')
+        is_doctor_available = attrs.get('is_doctor_available')
+
+        if designation != 'pharmacist' and pharmacist_type:
+            raise serializers.ValidationError("Pharmacist type can only be set if designation is 'pharmacist'.")
+
+        if designation == 'pharmacist' and not pharmacist_type:
+            attrs['pharmacist_type'] = 'out'
+
+         # Doctor availability validation
+        if designation != 'doctor' and 'is_doctor_available' in attrs:
+            attrs.pop('is_doctor_available', None)  # Remove it if not doctor
+
+        return attrs
+    
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+
+        if instance.designation != 'pharmacist':
+            rep.pop('pharmacist_type', None)
+        if instance.designation != 'doctor':
+            rep.pop('is_doctor_available', None)
+        return rep
+
 
     def create(self, validated_data):
         # Hash password before saving
         validated_data['password'] = make_password(validated_data['password'])
         return super().create(validated_data)
+    
+
+
 
 class AllergiesSerializer(serializers.ModelSerializer):
     class Meta:
@@ -48,7 +78,34 @@ class PatientDetailsSerializer(serializers.ModelSerializer):
             today = date.today()
             return today.year - obj.dob.year - ((today.month, today.day) < (obj.dob.month, obj.dob.day))
         return None
+    
 
+class PatientRegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PatientDetails
+        fields = [
+            'full_name', 'gender', 'dob', 'relative_name',
+            'contact_number', 'email', 'address', 'blood_group',
+            'medical_history', 'password'
+        ]
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        patient = PatientDetails(**validated_data)
+        patient.set_password(password)
+
+        # Generate 6-digit OTP
+        otp = str(random.randint(100000, 999999))
+        patient.email_otp = otp
+        patient.save()
+
+        # Log OTP (Replace with actual email/SMS in production)
+        print(f"OTP sent to {patient.email}: {otp}")
+
+        return patient
 
 class FindingsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -106,13 +163,23 @@ class OngoingMedicationSerializer(serializers.ModelSerializer):
     #         'start_date',
     #     ]
 
+class PharmacyMedicineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PharmacyMedicine
+        fields = '__all__'
+        read_only_fields = ['hospital']
+
+
 class MedicineSerializer(serializers.ModelSerializer):
     dosage = serializers.SerializerMethodField()
+    pharmacy_medicine_detail = PharmacyMedicineSerializer(source='pharmacy_medicine', read_only=True)
+
+    # pharmacy_medicine = serializers.SerializerMethodField()
 
     class Meta:
         model = Medicine
         fields = [
-            'id', 'medicine_name', 'type', 'dosage', 'dosage_amount',
+            'id', 'pharmacy_medicine','pharmacy_medicine_detail', 'dosage', 'dosage_amount',
             'dosage_unit', 'frequency', 'till_date', 'added_by', 'clinical_note', 'hospital',
         ]
 
@@ -152,19 +219,49 @@ class AttachmentsSerializer(serializers.ModelSerializer):
         read_only_fields = ['date']
 
 class OPDSerializer(serializers.ModelSerializer):
+    patient = PatientDetailsSerializer(read_only=True)
     class Meta:
         model = OPD
         fields = '__all__'
 
 
 class PrescriptionItemSerializer(serializers.ModelSerializer):
+    selling_price = serializers.SerializerMethodField()
+    total_price = serializers.SerializerMethodField()
+    pharmacy_medicine = PharmacyMedicineSerializer(read_only=True)
+    
     class Meta:
         model = PrescriptionItem
-        fields = '__all__'
+        # fields = '__all__'
+        fields = [
+            'id',
+            'pharmacy_medicine', 
+            'dosage',
+            'duration_days',
+            'instruction',
+            'quantity',
+            'selling_price',
+            'total_price',
+        ]
+
+    def get_selling_price(self, obj):
+        try:
+            stock = MedicineStock.objects.filter(
+                medicine=obj.pharmacy_medicine, 
+                hospital=obj.hospital
+            ).order_by('-last_updated').first()  # Or your criteria
+            return stock.selling_price if stock else None
+        except Exception:
+            return None
+        
+    def get_total_price(self, obj):
+        selling_price = self.get_selling_price(obj)
+        return round(selling_price * obj.quantity, 2) if selling_price and obj.quantity else None
 
 
 class PrescriptionSerializer(serializers.ModelSerializer):
     items = PrescriptionItemSerializer(many=True, read_only=True)
+    patient = PatientDetailsSerializer(read_only=True)
     
     class Meta:
         model = Prescription
@@ -231,3 +328,99 @@ class IPDSerializer(serializers.ModelSerializer):
         model = IPD
         fields = '__all__'
         read_only_fields = ['hospital', 'entry_date']
+
+
+
+class SupplierSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Supplier
+        fields = '__all__'
+        read_only_fields = ['hospital']
+
+class PharmacyBillSerializer(serializers.ModelSerializer):
+    patient = PatientDetailsSerializer(read_only=True)
+    class Meta:
+        model = PharmacyBill
+        fields = '__all__'
+        read_only_fields = ['date_issued', 'payment_date', 'total_amount']
+
+
+class MedicineStockSerializer(serializers.ModelSerializer):
+    pharmacy_medicine = PharmacyMedicineSerializer(read_only=True)
+    
+    class Meta:
+        model = MedicineStock
+        fields = '__all__'
+        read_only_fields = ['hospital', 'last_updated']
+
+class StockTransactionSerializer(serializers.ModelSerializer):
+    hospital = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StockTransaction
+        fields = ['id', 'transaction_type', 'quantity', 'transaction_date', 'notes', 'medicine_stock', 'hospital']
+
+    def get_hospital(self, obj):
+        return obj.medicine_stock.hospital.id if obj.medicine_stock and obj.medicine_stock.hospital else None
+    
+class PatientAppointmentSerializer(serializers.ModelSerializer):
+    preferred_doctor = HMSUserSerializer(read_only=True)
+    patient = PatientDetailsSerializer(read_only=True)
+
+    class Meta:
+        model = PatientAppointment
+        fields = '__all__'
+        read_only_fields = ['hospital','final_status', 'created_at', 'updated_at', 'final_time', 'status']
+    
+class AppointmentStatusUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PatientAppointment
+        fields = ['status', 'final_time', 'status_remark', 'patient_status']
+
+    def validate(self, attrs):
+        instance = self.instance  # current appointment object from DB
+        new_status = attrs.get('status')
+
+        # Prevent updating status if already accepted or rejected
+        if instance.status in ['accepted', 'rejected']:
+            raise serializers.ValidationError(
+                f"Appointment is already '{instance.status}' and cannot be changed."
+            )
+
+        # Validate final_time requirement
+        if new_status in ['accepted', 'rescheduled'] and not attrs.get('final_time'):
+            raise serializers.ValidationError(
+                f"'final_time' is required when status is '{new_status}'."
+            )
+
+        return attrs
+    
+    
+class PatientAppointmentResponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PatientAppointment
+        fields = ['patient_status']
+
+    def validate(self, attrs):
+        patient_status = attrs.get('patient_status')
+        appointment = self.instance
+
+        if appointment.status != 'rescheduled':
+            raise serializers.ValidationError("Patient can only respond to rescheduled appointments.")
+
+        return attrs
+    
+class DoctorTimetableSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DoctorTimetable
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at']
+
+
+class LabReportSerializer(serializers.ModelSerializer):
+    patient = PatientDetailsSerializer(read_only=True)
+    uploaded_by = HMSUserSerializer(read_only=True)
+
+    class Meta:
+        model = LabReport
+        fields = '__all__'

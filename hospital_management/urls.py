@@ -1,21 +1,33 @@
 from django.urls import path
-from .views import HospitalCreateAPIView, HMSUserRegisterAPIView, HMSUserLoginAPIView, PatientDetailsCreateAPIView, PatientDetailsUpdateAPIView, FindingsCreateAPIView, FindingsByPatientAPIView, FindingsUpdateAPIView, AllergiesCreateAPIView, AllergiesByPatientAPIView, AdminAddUserAPIView, GetAllUsersAPIView, PatientFamilyHistoryCreateView, PatientFamilyHistoryByPatientView, HMSUserUpdateView, HMSUserDeleteView, HMSUserStatusUpdateView, CreatePastHospitalHistoryAPIView, GetPastHospitalHistoryByPatientAPIView, MedicalHistoryCurrentHospitalCreateAPIView, MedicalHistoryCurrentHospitalByPatientAPIView, DiseasesCreateAPIView, DiseasesByPatientAPIView, UpdateDiseaseStatusAPIView, OngoingMedicationCreateAPIView, OngoingMedicationByPatientAPIView, MedicineCreateAPIView, ClinicalNotesCreateAPIView, ClinicalNotesByPatientAPIView, CertificateCreateAPIView, PatientFullHistoryAPIView, AttachmentsCreateAPIView, OPDCreateAPIView, OPDStatusUpdateAPIView, OPDListByDoctorAPIView, PrescriptionCreateAPIView, AllMedicineNamesAPIView, GetPrescriptionsByPatientAPIView, BillperticularsCreateAPIView, BillCreateAPIView, GetBillsByPatientAPIView, UpdateBillPaymentAPIView, BillPerticularsDeleteAPIView, BillPerticularsUpdateAPIView, InvoiceListAPIView, WardCreateAPIView, BedCreateAPIView,IPDCreateAPIView, GetBedsByWardAPIView, UpdateBedStatusAPIView, GetAllWardsAPIView, IPDTransferDoctorAPIView, IPDByDoctorAPIView, WardWithBedsAPIView
+from .views import HospitalCreateAPIView, HMSUserRegisterAPIView, HMSUserLoginAPIView, PatientDetailsCreateAPIView, PatientDetailsUpdateAPIView, FindingsCreateAPIView, FindingsByPatientAPIView, FindingsUpdateAPIView, AllergiesCreateAPIView, AllergiesByPatientAPIView, AdminAddUserAPIView, GetAllUsersAPIView, PatientFamilyHistoryCreateView, PatientFamilyHistoryByPatientView, HMSUserUpdateView, HMSUserDeleteView, HMSUserStatusUpdateView, CreatePastHospitalHistoryAPIView, GetPastHospitalHistoryByPatientAPIView, MedicalHistoryCurrentHospitalCreateAPIView, MedicalHistoryCurrentHospitalByPatientAPIView, DiseasesCreateAPIView, DiseasesByPatientAPIView, UpdateDiseaseStatusAPIView, OngoingMedicationCreateAPIView, OngoingMedicationByPatientAPIView, MedicineCreateAPIView, ClinicalNotesCreateAPIView, ClinicalNotesByPatientAPIView, CertificateCreateAPIView, PatientFullHistoryAPIView, AttachmentsCreateAPIView, OPDCreateAPIView, OPDStatusUpdateAPIView, OPDListByDoctorAPIView, PrescriptionCreateAPIView, AllMedicineNamesAPIView, GetPrescriptionsByPatientAPIView, BillperticularsCreateAPIView, BillCreateAPIView, GetBillsByPatientAPIView, UpdateBillPaymentAPIView, BillPerticularsDeleteAPIView, BillPerticularsUpdateAPIView, InvoiceListAPIView, WardCreateAPIView, BedCreateAPIView,IPDCreateAPIView, GetBedsByWardAPIView, UpdateBedStatusAPIView, GetAllWardsAPIView, IPDTransferDoctorAPIView, IPDByDoctorAPIView, WardWithBedsAPIView, SupplierCreateAPIView, PrescriptionPaymentUpdateAPIView, PharmacyBillCreateAPIView, UpdatePharmacyBillPaymentView, PharmacyMedicineCreateView, MedicineStockCreateView, StockTransactionListView, PrescriptionWithBillAPIView, UpdateDoctorAvailabilityView, PatientRegisterView, VerifyPatientOTPView, PatientLoginView, AvailableDoctorsView, PatientForgotPasswordAPIView, PatientResetPasswordAPIView, PatientVerifyOTPAPIView, GetHMSUserWithHospitalView, DoctorPastOPDView, GetHospitalByIdView, CreatePatientAppointmentAPIView, AppointmentStatusUpdateView, PatientAppointmentResponseAPIView, DoctorAppointmentsAPIView, PatientAppointmentsAPIView, DoctorTimetableCreateAPIView, DoctorTimetableByDoctorAPIView, UpdateDoctorTimetableAPIView
 
 urlpatterns = [
 
     path('hospital-and-admin/', HospitalCreateAPIView.as_view(), name='create-hospital'),
+    # path('hospital/get-by-id/', GetHospitalByIdView.as_view(), name='get-hospital-by-id'),
+    path('hospital/<str:hospital_id>/', GetHospitalByIdView.as_view(), name='get-hospital-by-id'),
+
     path('hmsuser/register/', HMSUserRegisterAPIView.as_view(), name='hmsuser-register'),
     path('hmsuser/login/', HMSUserLoginAPIView.as_view(), name='hmsuser-login'),
     path('hmsuser/admin/add-user/', AdminAddUserAPIView.as_view(), name='admin-add-user'),
     path('hmsuser/get-users-all/', GetAllUsersAPIView.as_view(), name='get-all-users'),
+    path('hmsuser/doctors/available/', AvailableDoctorsView.as_view(), name='available_doctors'),      #list of available doctors
     path('hmsuser/update/<int:user_id>/', HMSUserUpdateView.as_view(), name='update-hms-user'),
     path('hmsuser/delete/<int:user_id>/', HMSUserDeleteView.as_view(), name='delete-hms-user'),
     path('hmsuser/status/<int:user_id>/', HMSUserStatusUpdateView.as_view(), name='hmsuser-status-toggle'),
+    path('hmsuser/doctor/<int:doctor_id>/availability/', UpdateDoctorAvailabilityView.as_view(), name='update-doctor-availability'),
+    path('hospital-hms-user/<int:user_id>/', GetHMSUserWithHospitalView.as_view(), name='get-hms-user-with-hospital'),  #for profile section
 
     path('patient-details/', PatientDetailsCreateAPIView.as_view(), name='patient-create'),
     path('patient-detail/', PatientDetailsCreateAPIView.as_view(), name=' get-patient-create'),
     path('patient/update/<int:pk>/', PatientDetailsUpdateAPIView.as_view(), name='patient-update'),
     path('patient/delete/<int:pk>/', PatientDetailsUpdateAPIView.as_view(), name='patient-update'),
+    path('patient/register/', PatientRegisterView.as_view(), name='patient_register'),
+    path('patient/verify-otp/', VerifyPatientOTPView.as_view(), name='verify_patient_otp'),
+    path('patient/login/', PatientLoginView.as_view(), name='patient_login'),
+    path('patient/forgot-password/', PatientForgotPasswordAPIView.as_view(), name='patient_forgot_password'),
+    path('patient/forget-password/verify-otp/', PatientVerifyOTPAPIView.as_view(), name='patient-verify-otp'),
+    path('patient/reset-password/', PatientResetPasswordAPIView.as_view(), name='patient_reset_password'),
 
     # EX Finding API
     path('finding/', FindingsCreateAPIView.as_view(), name='exfinding-create'),
@@ -59,11 +71,15 @@ urlpatterns = [
     path('opds/', OPDCreateAPIView.as_view(), name='get-all-opd'),
     path('opd/<int:opd_id>/update-status/', OPDStatusUpdateAPIView.as_view(), name='update-opd-status'),
     path('opd/doctor/<int:doctor_id>/', OPDListByDoctorAPIView.as_view(), name='opd-by-doctor'),
+    path('opd/past/dpctor/<int:doctor_id>/', DoctorPastOPDView.as_view(), name='doctor-past-opd'),
 
     path('prescription/', PrescriptionCreateAPIView.as_view(), name='create-prescription'),
     path('prescriptions/', PrescriptionCreateAPIView.as_view(), name='get-all-prescriptions'),
     path('prescription/medicine-names/', AllMedicineNamesAPIView.as_view(), name='all-medicine-names'),
     path('prescription/patient/<int:patient_id>/', GetPrescriptionsByPatientAPIView.as_view(), name='get-prescriptions-by-patient'),
+    path('supplier/', SupplierCreateAPIView.as_view(), name='supplier-create'),
+    path('suppliers/', SupplierCreateAPIView.as_view(), name='supplier-create'),
+    path('prescription/<int:pk>/update/', PrescriptionPaymentUpdateAPIView.as_view(), name='update-prescription-payment'),
 
     path('bill-perticulars/', BillperticularsCreateAPIView.as_view(), name='bill-perticulars-create'),
     path('bill/particulars/', BillperticularsCreateAPIView.as_view(), name='bill-particulars-list'),
@@ -79,16 +95,34 @@ urlpatterns = [
     path('wards/', WardCreateAPIView.as_view(), name='create-ward'),
     path('wards_all/', GetAllWardsAPIView.as_view(), name='get-all-wards'),
 
-
     path('bed/', BedCreateAPIView.as_view(), name='create-bed'),
     path('beds/ward/<int:ward_id>/', GetBedsByWardAPIView.as_view(), name='get-beds-by-ward'),
     path('beds/<int:bed_id>/update-status/', UpdateBedStatusAPIView.as_view(), name="update-bed-status"),
     path('wards-beds/', WardWithBedsAPIView.as_view(), name='wards-beds'),
 
-
     path("ipd/", IPDCreateAPIView.as_view(), name="ipd-create"),
     path('ipd-list/', IPDCreateAPIView.as_view(), name='ipd-list'),
     path('ipd/by-doctor/<int:doctor_id>/', IPDByDoctorAPIView.as_view(), name='ipd-by-doctor'),
     path('ipd/<int:pk>/transfer-doctor/', IPDTransferDoctorAPIView.as_view(), name='ipd-update-doctor'),
+
+    path('pharmacy-bill/', PharmacyBillCreateAPIView.as_view(), name='pharmacy-bill-create'),
+    path('pharmacy-bill/<int:pk>/update/', UpdatePharmacyBillPaymentView.as_view(), name='update-prescription-payment'),
+    path('prescriptions/with-bills/', PrescriptionWithBillAPIView.as_view(), name='pharmacy-bill-by-prescription'),
+
+    path('pharmacy/medicine/', PharmacyMedicineCreateView.as_view(), name='pharmacy-medicine-create'),
+    path('pharmacy-medicine/', PharmacyMedicineCreateView.as_view(), name='pharmacy-medicine-get'),
+    path('pharmacy/medicine-stock/', MedicineStockCreateView.as_view(), name='medicine-stock-create'),
+    path('pharmacy/medicine-stocks/', MedicineStockCreateView.as_view(), name='medicine-stock-create'),
+    path('pharmacy/transactions/', StockTransactionListView.as_view(), name='pharmacy-stock-transactions'),
+
+    path('doctor-timetable/', DoctorTimetableCreateAPIView.as_view(), name='create-doctor-timetable'),
+    path('doctor-timetable/<int:doctor_id>/', DoctorTimetableByDoctorAPIView.as_view(), name='get-doctor-timetable'),
+    path('doctor-timetable/<int:pk>/update/', UpdateDoctorTimetableAPIView.as_view()),
+
+    path('patient/appointment/', CreatePatientAppointmentAPIView.as_view(), name='create-patient-appointment'),
+    path('doctor/<int:doctor_id>/appointments/', DoctorAppointmentsAPIView.as_view()),
+    path('patient/<int:patient_id>/appointments/', PatientAppointmentsAPIView.as_view()),
+    path('patient/appointment/<int:appointment_id>/doctor-status/', AppointmentStatusUpdateView.as_view()),
+    path('patient/appointment/<int:pk>/patient-response/', PatientAppointmentResponseAPIView.as_view(), name='patient-response'),
 
 ]
