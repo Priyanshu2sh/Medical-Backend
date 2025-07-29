@@ -17,9 +17,9 @@ from django.conf import settings
 from rest_framework import status
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.hashers import make_password
-from .models import Hospital, HMSUser, PatientDetails, Findings, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, ClinicalNotes, Medicine, Certificate, Attachments, OPD, PrescriptionItem, Prescription, BillPerticulars, Bill, Invoice, Bed, Ward, DoctorHistory, IPD, Supplier, PharmacyBill, PharmacyMedicine, StockTransaction, MedicineStock, PatientAppointment, DoctorTimetable
+from .models import Hospital, HMSUser, PatientDetails, Findings, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, ClinicalNotes, Medicine, Certificate, Attachments, OPD, PrescriptionItem, Prescription, BillPerticulars, Bill, Invoice, Bed, Ward, DoctorHistory, IPD, Supplier, PharmacyBill, PharmacyMedicine, StockTransaction, MedicineStock, PatientAppointment, DoctorTimetable, LabReport, BirthRecord, DeathReport
 
-from .serializers import HospitalSerializer, HMSUserSerializer, PatientDetailsSerializer, FindingsSerializer, AllergiesSerializer, PatientFamilyHistorySerializer, PatientPastHospitalHistorySerializer, MedicalHistoryCurrentHospitalSerializer, DiseasesSerializer, OngoingMedicationSerializer, MedicineSerializer, ClinicalNotesSerializer, CertificateSerializer, AttachmentsSerializer, OPDSerializer, PrescriptionSerializer, PrescriptionItemSerializer, BillPerticularsSerializer, BillSerializer, InvoiceSerializer, WardSerializer, BedSerializer,IPDSerializer, SupplierSerializer, PharmacyBillSerializer, PharmacyMedicineSerializer, MedicineStockSerializer, StockTransactionSerializer, PatientRegisterSerializer, PatientAppointmentSerializer, AppointmentStatusUpdateSerializer, PatientAppointmentResponseSerializer, DoctorTimetableSerializer
+from .serializers import HospitalSerializer, HMSUserSerializer, PatientDetailsSerializer, FindingsSerializer, AllergiesSerializer, PatientFamilyHistorySerializer, PatientPastHospitalHistorySerializer, MedicalHistoryCurrentHospitalSerializer, DiseasesSerializer, OngoingMedicationSerializer, MedicineSerializer, ClinicalNotesSerializer, CertificateSerializer, AttachmentsSerializer, OPDSerializer, PrescriptionSerializer, PrescriptionItemSerializer, BillPerticularsSerializer, BillSerializer, InvoiceSerializer, WardSerializer, BedSerializer,IPDSerializer, SupplierSerializer, PharmacyBillSerializer, PharmacyMedicineSerializer, MedicineStockSerializer, StockTransactionSerializer, PatientRegisterSerializer, PatientAppointmentSerializer, AppointmentStatusUpdateSerializer, PatientAppointmentResponseSerializer, DoctorTimetableSerializer, LabReportSerializer, BirthRecordSerializer, DeathReportSerializer
 
 
 class HospitalCreateAPIView(APIView):
@@ -413,6 +413,28 @@ class PatientDetailsCreateAPIView(APIView):
             "patients": serializer.data,
             "hospital": HospitalSerializer(hospital).data
         }, status=status.HTTP_200_OK)
+
+class GetPatientDetailsByIdView(APIView):
+    def get(self, request, patient_id):
+        hospital_id = request.headers.get("Hospital-Id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid Hospital ID."}, status=status.HTTP_404_NOT_FOUND)
+        
+        try:
+            patient = PatientDetails.objects.get(hospital=hospital, id=patient_id)
+        except PatientDetails.DoesNotExist:
+            return Response({"error": "Patient not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = PatientDetailsSerializer(patient)
+        return Response({
+            "data": serializer.data,
+            "hospital": HospitalSerializer(hospital).data
+            }, status=status.HTTP_200_OK)
 
 class PatientRegisterView(APIView):
     def post(self, request):
@@ -2678,7 +2700,7 @@ class DoctorTimetableCreateAPIView(APIView):
         data = request.data.copy()
         data['hospital'] = hospital.id  # Pass PK to serializer
 
-        serializer = DoctorTimetableSerializer(data=data)
+        serializer = DoctorTimetableSerializer(data=data, many=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -2850,3 +2872,163 @@ class PatientAppointmentResponseAPIView(APIView):
             serializer.save()
             return Response({"message": "Patient response recorded successfully", "data": serializer.data})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# Lab assistance - 
+class LabReportCreateAPIView(APIView):
+    def post(self, request):
+        try:
+            hospital_id = request.headers.get("hospital_id")
+            if not hospital_id:
+                return Response({"error": "Hospital ID is required in headers."}, status=http_status.HTTP_400_BAD_REQUEST)
+
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid hospital ID."}, status=http_status.HTTP_404_NOT_FOUND)
+
+        # Extract patient and uploader
+        patient_id = request.data.get("patient")
+        uploaded_by_id = request.data.get("uploaded_by")
+
+        if not patient_id or not uploaded_by_id:
+            return Response({"error": "Both 'patient' and 'uploaded_by' fields are required."}, status=http_status.HTTP_400_BAD_REQUEST)
+
+        try:
+            patient = PatientDetails.objects.get(id=patient_id, hospital=hospital)
+            uploaded_by = HMSUser.objects.get(id=uploaded_by_id, hospital=hospital)
+        except (PatientDetails.DoesNotExist, HMSUser.DoesNotExist):
+            return Response({"error": "Invalid patient or uploaded_by for this hospital."}, status=http_status.HTTP_404_NOT_FOUND)
+
+        # Create lab report
+        serializer = LabReportSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(patient=patient, uploaded_by=uploaded_by)
+            return Response({"message": "Lab report uploaded successfully.", "data": serializer.data}, status=http_status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=http_status.HTTP_400_BAD_REQUEST)
+    
+class LabReportsByLabAssistantAPIView(APIView):
+    def get(self, request, lab_assistant_id):
+        hospital_id = request.headers.get("hospital_id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=http_status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid hospital ID."}, status=http_status.HTTP_404_NOT_FOUND)
+
+        try:
+            lab_assistant = HMSUser.objects.get(id=lab_assistant_id, designation='lab_assistant', hospital=hospital)
+        except HMSUser.DoesNotExist:
+            return Response({"error": "Lab Assistant not found for this hospital."}, status=http_status.HTTP_404_NOT_FOUND)
+
+        lab_reports = LabReport.objects.filter(uploaded_by=lab_assistant)
+        serializer = LabReportSerializer(lab_reports, many=True)
+
+        return Response({"lab_reports": serializer.data}, status=http_status.HTTP_200_OK)
+
+class LabReportDeleteAPIView(APIView):
+    def delete(self, request, report_id):
+        hospital_id = request.headers.get("hospital_id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=http_status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid hospital ID."}, status=http_status.HTTP_404_NOT_FOUND)
+
+        try:
+            lab_report = LabReport.objects.get(id=report_id, hospital=hospital)
+        except LabReport.DoesNotExist:
+            return Response({"error": "Lab report not found in this hospital."}, status=http_status.HTTP_404_NOT_FOUND)
+
+        lab_report.delete()
+        return Response({"message": "Lab report deleted successfully."}, status=http_status.HTTP_200_OK)
+
+
+# for birth report
+class BirthRecordCreateView(APIView):
+    def post(self, request):
+        hospital_id = request.headers.get("hospital_id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid hospital_id."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data.copy()
+        data["hospital"] = hospital.id
+
+        serializer = BirthRecordSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save(hospital=hospital)
+            return Response({
+                "message": "Birth report created successfully",
+                "data":serializer.data,
+                "hospital":HospitalSerializer(hospital).data
+                }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def get(self, request):
+        hospital_id = request.headers.get("hospital_id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid hospital_id."}, status=status.HTTP_404_NOT_FOUND)
+
+        birth_records = BirthRecord.objects.filter(hospital=hospital)
+        serializer = BirthRecordSerializer(birth_records, many=True)
+        return Response({
+                "message": "Birth report Fetch successfully",
+                "data":serializer.data,
+                "hospital":HospitalSerializer(hospital).data
+                }, status=status.HTTP_200_OK)
+
+class DeathReportCreateView(APIView):
+    def post(self, request):
+        hospital_id = request.headers.get("hospital_id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid hospital_id."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data.copy()
+        data['hospital'] = hospital.id  # Use the primary key
+
+        serializer = DeathReportSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save(hospital=hospital)
+            return Response({
+                "message": "Death report created successfully",
+                "data": serializer.data,
+                "hospital":HospitalSerializer(hospital).data, 
+                }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def get(self, request):
+        hospital_id = request.headers.get("hospital_id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid hospital_id."}, status=status.HTTP_404_NOT_FOUND)
+
+        death_reports = DeathReport.objects.filter(hospital=hospital)
+        serializer = DeathReportSerializer(death_reports, many=True)
+        return Response({
+                "message": "Death report Fetch successfully",
+                "data":serializer.data,
+                "hospital":HospitalSerializer(hospital).data
+                }, status=status.HTTP_200_OK)

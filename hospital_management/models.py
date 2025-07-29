@@ -810,6 +810,7 @@ class DoctorTimetable(models.Model):
 # For Lab assistance
 class LabReport(models.Model):
     patient = models.ForeignKey(PatientDetails, on_delete=models.CASCADE, related_name='lab_reports')
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name="lab_reports")
     uploaded_by = models.ForeignKey(HMSUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='uploaded_reports')
     report_name = models.CharField(max_length=255)
     date = models.DateField(auto_now_add=True)
@@ -818,3 +819,32 @@ class LabReport(models.Model):
 
     def __str__(self):
         return f"{self.report_name} - {self.patient.full_name}"
+
+class BirthRecord(models.Model):
+    patient = models.ForeignKey(PatientDetails, on_delete=models.CASCADE, related_name="birth_records")  # mother
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE)
+    child_name = models.CharField(max_length=100, blank=True, null=True)
+    gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')])
+    dob_child = models.DateTimeField()
+    birth_place = models.CharField(max_length=255)
+    father_name = models.CharField(max_length=100)
+    weight = models.DecimalField(max_digits=5, decimal_places=2, help_text="Weight in KG")
+    remark = models.TextField(blank=True, null=True)
+    created_by = models.ForeignKey(HMSUser, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"BirthRecord of {self.child_name or 'Unnamed'} ({self.dob_child.date()})"
+    
+class DeathReport(models.Model):
+    patient = models.ForeignKey(PatientDetails, on_delete=models.CASCADE, related_name="death_reports")
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE)
+    date_of_death = models.DateTimeField()
+    gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')])
+    cause_of_death = models.TextField()
+    remark = models.TextField(blank=True, null=True)
+    created_by = models.ForeignKey(HMSUser, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"DeathReport of {self.patient.full_name} ({self.date_of_death.date()})"

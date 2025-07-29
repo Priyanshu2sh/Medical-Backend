@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 import random
 from datetime import date
-from .models import Hospital, PatientDetails, Findings, HMSUser, Allergies, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, Medicine, ClinicalNotes, Certificate, Attachments, OPD, PrescriptionItem, Prescription, BillPerticulars, Bill, Invoice, Bed, Ward, IPD, DoctorHistory, Supplier, PharmacyBill, PharmacyMedicine, MedicineStock, StockTransaction, PatientAppointment, DoctorTimetable, LabReport
+from .models import Hospital, PatientDetails, Findings, HMSUser, Allergies, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, Medicine, ClinicalNotes, Certificate, Attachments, OPD, PrescriptionItem, Prescription, BillPerticulars, Bill, Invoice, Bed, Ward, IPD, DoctorHistory, Supplier, PharmacyBill, PharmacyMedicine, MedicineStock, StockTransaction, PatientAppointment, DoctorTimetable, LabReport, DeathReport, BirthRecord
 
 
 class HospitalSerializer(serializers.ModelSerializer):
@@ -423,4 +423,14 @@ class LabReportSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = LabReport
+        fields = '__all__'
+
+class BirthRecordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BirthRecord
+        fields = '__all__'
+        
+class DeathReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeathReport
         fields = '__all__'
