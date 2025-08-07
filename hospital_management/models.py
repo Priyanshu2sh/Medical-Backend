@@ -56,6 +56,42 @@ class HMSUser(models.Model):
     def __str__(self):
         return f"{self.name} ({self.designation})"
 
+class DoctorProfile(models.Model):
+    SPECIALIZATION_CHOICES = [
+        ("cardiology", "Cardiology"),
+        ("neurology", "Neurology"),
+        ("orthopedics", "Orthopedics"),
+        ("pediatrics", "Pediatrics"),
+        ("gynecology", "Gynecology"),
+        ("dermatology", "Dermatology"),
+        ("psychiatry", "Psychiatry"),
+        ("general_medicine", "General Medicine"),
+        ("ent", "ENT"),
+        ("other", "Other"),
+    ]
+
+    GENDER_CHOICES = [
+        ("male", "Male"),
+        ("female", "Female"),
+        ("other", "Other"),
+    ]
+
+    doctor = models.OneToOneField(HMSUser, on_delete=models.CASCADE, limit_choices_to={'designation': 'doctor'})
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name='doctor_profiles')
+    phone_number = models.CharField(max_length=15)
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
+    dob = models.DateField()
+    photo = models.ImageField(upload_to="doctor_photos/", blank=True, null=True)
+    qualification = models.CharField(max_length=255)
+    specialization = models.CharField(
+        max_length=50, choices=SPECIALIZATION_CHOICES
+    )
+    experience_years = models.PositiveIntegerField()
+
+
+    def __str__(self):
+        return f"{self.doctor.full_name} - {self.specialization}"
+
 class Allergies(models.Model):
     hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, null=True, blank=True, related_name="allergies")
     name = models.CharField(max_length=100)
@@ -714,11 +750,14 @@ class PatientAppointment(models.Model):
         ('accepted', 'Accepted'),
         ('rescheduled', 'Rescheduled'),
         ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
+        ('completed', 'Completed'),
     ]
 
     PATIENT_STATUS_CHOICES = [
         ('available', 'Available'),
         ('not_available', 'Not Available'),
+        ('cancelled', 'Cancelled'),
     ]
     hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name='appointments')
     patient = models.ForeignKey(PatientDetails, on_delete=models.CASCADE, related_name='appointments')
@@ -848,3 +887,53 @@ class DeathReport(models.Model):
 
     def __str__(self):
         return f"DeathReport of {self.patient.full_name} ({self.date_of_death.date()})"
+
+class PharmacyOutBill(models.Model):
+    PAYMENT_STATUS_CHOICES = [
+        ('paid', 'Paid'),
+        ('unpaid', 'Unpaid'),
+    ]
+
+    PAYMENT_MODE_CHOICES = [
+        ('cash', 'Cash'),
+        ('card', 'Card'),
+        ('upi', 'UPI'),
+        ('netbanking', 'Net Banking'),
+    ]
+
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE)
+    patient_name = models.CharField(max_length=255, null=True, blank=True)
+    note = models.TextField(null=True, blank=True)
+    medicine_items = models.JSONField()  # Stores list of medicines in JSON format
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='unpaid')
+    payment_mode = models.CharField(max_length=20, choices=PAYMENT_MODE_CHOICES, null=True, blank=True)
+    payment_date = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Out-Patient Bill - {self.patient_name} ({self.hospital.name})"
+
+class PharmacyOutInvoice(models.Model):
+    bill = models.ForeignKey('PharmacyOutBill', on_delete=models.CASCADE, related_name='invoices')
+    patient_name = models.CharField(max_length=255)
+    date = models.DateTimeField(default=timezone.now)
+    payment_mode = models.CharField(max_length=50)
+    paid_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    medicine_items = models.JSONField()
+
+    def __str__(self):
+        return f"Invoice #{self.id} - {self.patient_name}"
+
+
+class InvoicePharmacyBill(models.Model):
+    bill = models.ForeignKey('PharmacyBill', on_delete=models.CASCADE, related_name='pharmacy_invoices')
+    patient = models.ForeignKey('PatientDetails', on_delete=models.CASCADE, related_name='pharmacy_invoices', null=True, blank=True)
+    date = models.DateTimeField(default=timezone.now)
+    payment_mode = models.CharField(max_length=50, blank=True, null=True)
+    paid_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    medical_items = models.JSONField(default=list)  # Store medicine details in JSON format
+
+    def __str__(self):
+        return f"Invoice #{self.id} - {self.patient_name}"

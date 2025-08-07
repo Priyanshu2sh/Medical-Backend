@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 import random
 from datetime import date
-from .models import Hospital, PatientDetails, Findings, HMSUser, Allergies, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, Medicine, ClinicalNotes, Certificate, Attachments, OPD, PrescriptionItem, Prescription, BillPerticulars, Bill, Invoice, Bed, Ward, IPD, DoctorHistory, Supplier, PharmacyBill, PharmacyMedicine, MedicineStock, StockTransaction, PatientAppointment, DoctorTimetable, LabReport, DeathReport, BirthRecord
+from .models import Hospital, PatientDetails, Findings, HMSUser, Allergies, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, Medicine, ClinicalNotes, Certificate, Attachments, OPD, PrescriptionItem, Prescription, BillPerticulars, Bill, Invoice, Bed, Ward, IPD, DoctorHistory, Supplier, PharmacyBill, PharmacyMedicine, MedicineStock, StockTransaction, PatientAppointment, DoctorTimetable, LabReport, DeathReport, BirthRecord, DoctorProfile, PharmacyOutBill, InvoicePharmacyBill, PharmacyOutInvoice
 
 
 class HospitalSerializer(serializers.ModelSerializer):
@@ -51,7 +51,13 @@ class HMSUserSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
     
 
+class DoctorProfileSerializer(serializers.ModelSerializer):
+    doctor = HMSUserSerializer(read_only=True)
 
+    class Meta:
+        model = DoctorProfile
+        fields = '__all__'
+        read_only_fields = ['hospital']
 
 class AllergiesSerializer(serializers.ModelSerializer):
     class Meta:
@@ -381,6 +387,9 @@ class AppointmentStatusUpdateSerializer(serializers.ModelSerializer):
         instance = self.instance  # current appointment object from DB
         new_status = attrs.get('status')
 
+        if new_status == 'cancelled':
+            return attrs
+
         # Prevent updating status if already accepted or rejected
         if instance.status in ['accepted', 'rejected']:
             raise serializers.ValidationError(
@@ -424,6 +433,7 @@ class LabReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = LabReport
         fields = '__all__'
+        read_only_fields = ['hospital']
 
 class BirthRecordSerializer(serializers.ModelSerializer):
     class Meta:
@@ -431,6 +441,38 @@ class BirthRecordSerializer(serializers.ModelSerializer):
         fields = '__all__'
         
 class DeathReportSerializer(serializers.ModelSerializer):
+    patient = PatientDetailsSerializer(read_only=True)
     class Meta:
         model = DeathReport
         fields = '__all__'
+
+class PharmacyOutBillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PharmacyOutBill
+        fields = [
+            'id',
+            'hospital',
+            'patient_name',
+            'note',
+            'medicine_items',
+            'total_amount',
+            'payment_status',
+            'payment_mode',
+            'payment_date',
+            'created_at'
+        ]
+        read_only_fields = ['created_at', 'hospital']
+
+class PharmacyOutInvoiceSerializer(serializers.ModelSerializer):
+    bill = PharmacyOutBillSerializer(read_only=True)
+    class Meta:
+        model = PharmacyOutInvoice
+        fields = '__all__'
+
+class InvoicePharmacyBillSerializer(serializers.ModelSerializer):
+    patient = PatientDetailsSerializer(read_only=True)
+    bill = PharmacyBillSerializer(read_only=True)
+    class Meta:
+        model = InvoicePharmacyBill
+        # fields = "__all__"
+        fields = ['id', 'patient', 'bill', 'date', 'payment_mode', 'paid_amount', 'medical_items']
