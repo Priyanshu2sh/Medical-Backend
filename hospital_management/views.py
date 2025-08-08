@@ -89,15 +89,6 @@ class HMSUserRegisterAPIView(APIView):
     
 class HMSUserLoginAPIView(APIView):
     def post(self, request):
-        # hospital_id = request.headers.get('Hospital-Id')  # Make sure frontend sends this in headers
-
-        # if not hospital_id:
-        #     return Response({"error": "Hospital ID is required in headers."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # try:
-        #     hospital = Hospital.objects.get(hospital_id=hospital_id)
-        # except Hospital.DoesNotExist:
-        #     return Response({"error": "Invalid Hospital ID."}, status=status.HTTP_404_NOT_FOUND)
         
         email = request.data.get('email')
         password = request.data.get('password')
