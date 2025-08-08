@@ -1,6 +1,8 @@
 from django.db import models
 from django.db.models import JSONField
 from django.utils import timezone
+from django.core.exceptions import ValidationError
+from django.contrib.auth.hashers import make_password
 
 # Create your models here.
 class Hospital(models.Model):
@@ -9,6 +11,7 @@ class Hospital(models.Model):
     owner = models.CharField(max_length=255)
     contact = models.CharField(max_length=15)
     hospital_id = models.CharField(max_length=10, unique=True, blank=True)  # Custom ID like HID00001
+    logo = models.ImageField(upload_to='hospital_logos/', null=True, blank=True)
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -26,7 +29,13 @@ class HMSUser(models.Model):
         ('nurse', 'Nurse'),
         ('receptionist', 'Receptionist'),
         ('pharmacist', 'Pharmacist'),
+        ('lab_assistant', 'Lab Assistant'),
         ('admin', 'Admin'),
+    ]
+
+    PHARMACIST_TYPE_CHOICES = [
+    ('in', 'In'),
+    ('out', 'Out'),
     ]
 
     hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name="hms_users", null=True, blank=True)
@@ -35,9 +44,53 @@ class HMSUser(models.Model):
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=128)  # You can store hashed password here
     is_active = models.BooleanField(default=True) 
+    pharmacist_type = models.CharField(
+        max_length=10,
+        choices=PHARMACIST_TYPE_CHOICES,
+        null=True,
+        blank=True,
+        default='out'
+    )
+    is_doctor_available = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.name} ({self.designation})"
+
+class DoctorProfile(models.Model):
+    SPECIALIZATION_CHOICES = [
+        ("cardiology", "Cardiology"),
+        ("neurology", "Neurology"),
+        ("orthopedics", "Orthopedics"),
+        ("pediatrics", "Pediatrics"),
+        ("gynecology", "Gynecology"),
+        ("dermatology", "Dermatology"),
+        ("psychiatry", "Psychiatry"),
+        ("general_medicine", "General Medicine"),
+        ("ent", "ENT"),
+        ("other", "Other"),
+    ]
+
+    GENDER_CHOICES = [
+        ("male", "Male"),
+        ("female", "Female"),
+        ("other", "Other"),
+    ]
+
+    doctor = models.OneToOneField(HMSUser, on_delete=models.CASCADE, limit_choices_to={'designation': 'doctor'})
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name='doctor_profiles')
+    phone_number = models.CharField(max_length=15)
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
+    dob = models.DateField()
+    photo = models.ImageField(upload_to="doctor_photos/", blank=True, null=True)
+    qualification = models.CharField(max_length=255)
+    specialization = models.CharField(
+        max_length=50, choices=SPECIALIZATION_CHOICES
+    )
+    experience_years = models.PositiveIntegerField()
+
+
+    def __str__(self):
+        return f"{self.doctor.full_name} - {self.specialization}"
 
 class Allergies(models.Model):
     hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, null=True, blank=True, related_name="allergies")
@@ -79,6 +132,10 @@ class PatientDetails(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     is_active_patient = models.BooleanField(default=True)
 
+    password = models.CharField(max_length=128, null=True, blank=True)
+    email_otp = models.CharField(max_length=6, null=True, blank=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)  # Save first to generate `id`
         if not self.patient_id:
@@ -86,6 +143,13 @@ class PatientDetails(models.Model):
             number = str(self.id).zfill(5)
             self.patient_id = f"P{letter}{number}"
             super().save(update_fields=['patient_id'])  # Save again to update patient_id
+
+    def set_password(self, raw_password):
+        self.password = make_password(raw_password)
+
+    def check_password(self, raw_password):
+        from django.contrib.auth.hashers import check_password
+        return check_password(raw_password, self.password)
 
     def __str__(self):
         return self.full_name
@@ -241,6 +305,12 @@ class ClinicalNotes(models.Model):
         ('unbearable', 'Unbearable'),
     ]
 
+    added_by = models.ForeignKey(
+        'HMSUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='clinical_notes_added'
+    )
     hospital = models.ForeignKey('Hospital', on_delete=models.CASCADE, related_name='clinical_notes', null=True, blank=True)
     patient = models.ForeignKey(PatientDetails, on_delete=models.CASCADE)
     pain = models.CharField(max_length=255, null=True, blank=True)
@@ -260,6 +330,33 @@ class ClinicalNotes(models.Model):
     def __str__(self):
         return f"Clinical Notes for {self.patient} on {self.created_at.date()}"
     
+
+class PharmacyMedicine(models.Model):
+    TYPE_CHOICES = [
+        ('tablet', 'Tablet'),
+        ('liquid', 'Liquid'),
+        ('injection', 'Injection'),
+        ('ointment', 'Ointment'),
+        ('inhaler', 'Inhaler'),
+        ('drops', 'Drops'),
+    ]
+
+    DOSAGE_UNIT_CHOICES = [
+        ('mg', 'mg'),
+        ('ml', 'ml'),
+        ('g', 'g'),
+        ('units', 'units'),
+    ]
+    hospital = models.ForeignKey('Hospital', on_delete=models.CASCADE, related_name='pharmacy_medicines', null=True, blank=True)
+    medicine_name = models.CharField(max_length=100)
+    medicine_type = models.CharField(max_length=20, choices=TYPE_CHOICES) # e.g. Tablet, Syrup
+    medicine_unit = models.CharField(max_length=10, choices=DOSAGE_UNIT_CHOICES)  # e.g. mg, ml
+    manufacturer = models.CharField(max_length=100, blank=True, null=True)
+    is_narcotic = models.BooleanField(default=False)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.medicine_name}"
 
 class Medicine(models.Model):
     TYPE_CHOICES = [
@@ -290,8 +387,12 @@ class Medicine(models.Model):
     ]
     
     hospital = models.ForeignKey('Hospital', on_delete=models.CASCADE, related_name='medicines', null=True, blank=True)
-    medicine_name = models.CharField(max_length=100)
-    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    
+    pharmacy_medicine = models.ForeignKey(
+        'PharmacyMedicine',
+        on_delete=models.CASCADE,
+        related_name='prescribed_medicines'
+    )
     dosage_amount = models.PositiveIntegerField()
     dosage_unit = models.CharField(max_length=10, choices=DOSAGE_UNIT_CHOICES)
     frequency = models.CharField(max_length=30, choices=FREQUENCY_CHOICES)
@@ -306,7 +407,7 @@ class Medicine(models.Model):
     )
 
     def __str__(self):
-        return f"{self.medicine_name} for {self.clinical_note.patient}"
+        return f"{self.clinical_note.patient}"
     
 
 class Certificate(models.Model):
@@ -348,6 +449,11 @@ class OPD(models.Model):
         ('paid', 'Paid'),
     ]
 
+    OPD_TYPE_CHOICES = [
+        ('normal', 'Normal'),
+        ('emergency', 'Emergency'),
+    ]
+
     hospital = models.ForeignKey('Hospital', on_delete=models.CASCADE, related_name='opd_records', null=True, blank=True)
     date_time = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='waiting')
@@ -356,17 +462,27 @@ class OPD(models.Model):
     visit_count = models.IntegerField(default=0)
     description = models.TextField(blank=True, null=True)
     doctor = models.ForeignKey(HMSUser, on_delete=models.SET_NULL, null=True, limit_choices_to={'designation': 'doctor'})
+    opd_type = models.CharField(
+        max_length=20,
+        choices=OPD_TYPE_CHOICES,
+        default='normal',
+        null=True,
+        blank=True
+    )
+
 
     def __str__(self):
-        return f"OPD Visit - {self.patient.name} on {self.date}"
+        return f"OPD Visit - {self.patient.name} on {self.date_time}"
 
 
 class Prescription(models.Model):
+
     patient = models.ForeignKey(PatientDetails, on_delete=models.CASCADE, related_name="prescriptions")
     hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, null=True, blank=True)
     user = models.ForeignKey('HMSUser', limit_choices_to={'designation': 'doctor'}, on_delete=models.CASCADE)
     date_issued = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(blank=True, null=True)
+
 
     def __str__(self):
         return f"Prescription for {self.patient} by {self.user} on {self.date_issued.date()}"
@@ -374,14 +490,27 @@ class Prescription(models.Model):
 
 class PrescriptionItem(models.Model):
     prescription = models.ForeignKey(Prescription, on_delete=models.CASCADE, related_name="items")
-    medicine_name = models.CharField(max_length=255)
+    hospital = models.ForeignKey('Hospital', on_delete=models.CASCADE, related_name="prescription_items", null=True, blank=True)
+    pharmacy_medicine = models.ForeignKey('PharmacyMedicine', on_delete=models.CASCADE, related_name="prescription_items")
     dosage = models.CharField(max_length=100)
     duration_days = models.IntegerField()
     instruction = models.TextField()
+    quantity = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return self.medicine_name
 
+class Supplier(models.Model):
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name='suppliers', null=True, blank=True)
+    supplier_name = models.CharField(max_length=100)
+    contact = models.CharField(max_length=15, null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
+    address = models.TextField(null=True, blank=True)
+    purchase_date_time = models.DateTimeField(null=True, blank=True)
+    purchase_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    def __str__(self):
+        return self.supplier_name
 
 class Bill(models.Model):
     STATUS_CHOICES = [
@@ -488,6 +617,18 @@ class IPD(models.Model):
         ('suicide', 'Suicide'),
         ('other', 'Other'),
     ]
+
+    DEPARTMENT_CHOICES = [
+        ('operation_theatre', 'Operation Theatre'),
+        ('general_surgery', 'General Surgery'),
+        ('casualty_department', 'Casualty Department'),
+        ('ent_department', 'ENT Department'),
+        ('genecology_department', 'Genecology Department'),
+        ('neurology_department', 'Neurology Department'),
+        ('psychiatry_department', 'Psychiatry Department'),
+        ('paediatrics_department', 'Paediatrics Department'),
+    ]
+
     hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name='ipds')
     patient = models.ForeignKey(PatientDetails, on_delete=models.CASCADE, related_name="ipds")
     admitted_doctor = models.ForeignKey(HMSUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="admitted_ipds")
@@ -496,7 +637,12 @@ class IPD(models.Model):
 
     bill_category = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
-    department = models.CharField(max_length=100)
+    department = models.CharField(
+        max_length=50,
+        choices=DEPARTMENT_CHOICES,
+        null=True,
+        blank=True
+    )
     bed = models.ForeignKey(Bed, on_delete=models.SET_NULL, null=True, blank=True, related_name="ipd_beds")
     entry_date = models.DateTimeField(auto_now_add=True) 
     admit_date = models.DateTimeField(null=True, blank=True)  
@@ -527,3 +673,267 @@ class DoctorHistory(models.Model):
 
     def __str__(self):
         return f"Doctor {self.doctor.get_full_name()} (IPD #{self.ipd.id})"
+
+# Pharmacy 
+class PharmacyBill(models.Model):
+    PAYMENT_STATUS_CHOICES = [
+        ('paid', 'Paid'),
+        ('unpaid', 'Unpaid'),
+    ]
+
+    PAYMENT_MODE_CHOICES = [
+        ('cash', 'Cash'),
+        ('card', 'Card'),
+        ('upi', 'UPI'),
+        ('netbanking', 'Net Banking'),
+    ]
+
+    hospital = models.ForeignKey('Hospital', on_delete=models.CASCADE, related_name='pharmacy_bills')
+    patient = models.ForeignKey('PatientDetails', on_delete=models.CASCADE, related_name='pharmacy_bills')
+    doctor = models.ForeignKey(HMSUser, on_delete=models.CASCADE, limit_choices_to={'designation': 'doctor'}, null=True, blank=True)
+    date_issued = models.DateTimeField(null=True, blank=True)
+    prescription = models.ForeignKey(
+        'Prescription',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='pharmacy_bills'
+    )
+
+    medical_items = models.JSONField(null=True, blank=True)  
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    payment_status = models.CharField(max_length=10, choices=PAYMENT_STATUS_CHOICES, default='unpaid')
+    payment_mode = models.CharField(max_length=20, choices=PAYMENT_MODE_CHOICES, null=True, blank=True)
+    payment_date = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Pharmacy Bill #{self.id} for {self.patient}"
+    
+# Pharmacy stock 
+
+    
+class MedicineStock(models.Model):
+    hospital = models.ForeignKey('Hospital', on_delete=models.CASCADE, related_name='medicine_stocks', null=True, blank=True)
+    medicine = models.ForeignKey(PharmacyMedicine, on_delete=models.CASCADE, related_name='stocks')
+    batch_number = models.CharField(max_length=50)
+    expiry_date = models.DateField()
+    quantity = models.PositiveIntegerField()
+    purchase_price = models.DecimalField(max_digits=10, decimal_places=2)
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2)
+    last_updated = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"{self.medicine.medicine_name} - {self.batch_number}"
+    
+class StockTransaction(models.Model):
+    TRANSACTION_TYPES = (
+        ('IN', 'Stock In'),
+        ('OUT', 'Stock Out'),
+        # ('RETURN', 'Return'),
+        # ('ADJUSTMENT', 'Adjustment'),
+    )
+
+    hospital = models.ForeignKey('Hospital', on_delete=models.CASCADE, related_name='stock_transactions', null=True, blank=True)
+    medicine_stock = models.ForeignKey(MedicineStock, on_delete=models.CASCADE, related_name='transactions')
+    transaction_type = models.CharField(max_length=15, choices=TRANSACTION_TYPES)
+    quantity = models.PositiveIntegerField()
+    transaction_date = models.DateTimeField()
+    notes = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.transaction_type} - {self.quantity} units on {self.transaction_date.date()}"
+
+class PatientAppointment(models.Model):
+    STATUS_CHOICES = [
+        ('requested', 'Requested'),
+        ('accepted', 'Accepted'),
+        ('rescheduled', 'Rescheduled'),
+        ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
+        ('completed', 'Completed'),
+    ]
+
+    PATIENT_STATUS_CHOICES = [
+        ('available', 'Available'),
+        ('not_available', 'Not Available'),
+        ('cancelled', 'Cancelled'),
+    ]
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name='appointments')
+    patient = models.ForeignKey(PatientDetails, on_delete=models.CASCADE, related_name='appointments')
+    preferred_doctor = models.ForeignKey(HMSUser, on_delete=models.CASCADE, limit_choices_to={'designation': 'doctor'}, related_name='appointments')
+    department = models.CharField(max_length=100)
+    reason = models.TextField()
+    preferred_date_and_time = models.DateTimeField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='requested')
+    status_remark = models.TextField(null=True, blank=True)
+    patient_status = models.CharField(max_length=20, choices=PATIENT_STATUS_CHOICES)
+    final_time = models.DateTimeField(null=True, blank=True)
+    final_status = models.BooleanField(default=False, editable=False) 
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+
+        if self.status == 'accepted':
+            self.final_status = True
+        elif self.status == 'rescheduled' and self.patient_status == 'available':
+            self.final_status = True
+        else:
+            self.final_status = False
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Appointment with {self.preferred_doctor.name} on {self.preferred_date_and_time.strftime('%Y-%m-%d %H:%M')}"
+
+class DoctorTimetable(models.Model):
+    DAYS_OF_WEEK = [
+        ('monday', 'Monday'),
+        ('tuesday', 'Tuesday'),
+        ('wednesday', 'Wednesday'),
+        ('thursday', 'Thursday'),
+        ('friday', 'Friday'),
+        ('saturday', 'Saturday'),
+        ('sunday', 'Sunday'),
+    ]
+
+    doctor = models.ForeignKey(
+        HMSUser, 
+        on_delete=models.CASCADE, 
+        related_name='timetables',
+        limit_choices_to={'designation': 'doctor'}
+    )
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name='doctor_timetables')
+    day = models.CharField(max_length=10, choices=DAYS_OF_WEEK)
+    date = models.DateField(null=True, blank=True)  # Optional: used for specific exceptions
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    remark = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['doctor', 'hospital', 'day', 'start_time', 'end_time']
+
+    # def clean(self):
+    #     if self.start_time >= self.end_time:
+    #         raise ValidationError("Start time must be before end time.")
+
+    #     # Check for overlapping schedules
+    #     overlapping = DoctorTimetable.objects.filter(
+    #         doctor=self.doctor,
+    #         date=self.date,
+    #         hospital=self.hospital
+    #     ).exclude(pk=self.pk).filter(
+    #         start_time__lt=self.end_time,
+    #         end_time__gt=self.start_time
+    #     )
+
+    #     if overlapping.exists():
+    #         raise ValidationError("This time slot overlaps with an existing timetable.")
+
+    # def save(self, *args, **kwargs):
+    #     self.clean()
+    #     super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.doctor.name} - {self.date} ({self.start_time} to {self.end_time})"
+
+    def __str__(self):
+        return f"{self.doctor.name} - {self.day} ({self.start_time} to {self.end_time})"
+    
+
+# For Lab assistance
+class LabReport(models.Model):
+    patient = models.ForeignKey(PatientDetails, on_delete=models.CASCADE, related_name='lab_reports')
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name="lab_reports")
+    uploaded_by = models.ForeignKey(HMSUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='uploaded_reports')
+    report_name = models.CharField(max_length=255)
+    date = models.DateField(auto_now_add=True)
+    file = models.FileField(upload_to='lab_reports/')
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.report_name} - {self.patient.full_name}"
+
+class BirthRecord(models.Model):
+    patient = models.ForeignKey(PatientDetails, on_delete=models.CASCADE, related_name="birth_records")  # mother
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE)
+    child_name = models.CharField(max_length=100, blank=True, null=True)
+    gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')])
+    dob_child = models.DateTimeField()
+    birth_place = models.CharField(max_length=255)
+    father_name = models.CharField(max_length=100)
+    weight = models.DecimalField(max_digits=5, decimal_places=2, help_text="Weight in KG")
+    remark = models.TextField(blank=True, null=True)
+    created_by = models.ForeignKey(HMSUser, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"BirthRecord of {self.child_name or 'Unnamed'} ({self.dob_child.date()})"
+    
+class DeathReport(models.Model):
+    patient = models.ForeignKey(PatientDetails, on_delete=models.CASCADE, related_name="death_reports")
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE)
+    date_of_death = models.DateTimeField()
+    gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')])
+    cause_of_death = models.TextField()
+    remark = models.TextField(blank=True, null=True)
+    created_by = models.ForeignKey(HMSUser, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"DeathReport of {self.patient.full_name} ({self.date_of_death.date()})"
+
+class PharmacyOutBill(models.Model):
+    PAYMENT_STATUS_CHOICES = [
+        ('paid', 'Paid'),
+        ('unpaid', 'Unpaid'),
+    ]
+
+    PAYMENT_MODE_CHOICES = [
+        ('cash', 'Cash'),
+        ('card', 'Card'),
+        ('upi', 'UPI'),
+        ('netbanking', 'Net Banking'),
+    ]
+
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE)
+    patient_name = models.CharField(max_length=255, null=True, blank=True)
+    note = models.TextField(null=True, blank=True)
+    medicine_items = models.JSONField()  # Stores list of medicines in JSON format
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='unpaid')
+    payment_mode = models.CharField(max_length=20, choices=PAYMENT_MODE_CHOICES, null=True, blank=True)
+    payment_date = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Out-Patient Bill - {self.patient_name} ({self.hospital.name})"
+
+class PharmacyOutInvoice(models.Model):
+    bill = models.ForeignKey('PharmacyOutBill', on_delete=models.CASCADE, related_name='invoices')
+    patient_name = models.CharField(max_length=255)
+    date = models.DateTimeField(default=timezone.now)
+    payment_mode = models.CharField(max_length=50)
+    paid_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    medicine_items = models.JSONField()
+
+    def __str__(self):
+        return f"Invoice #{self.id} - {self.patient_name}"
+
+
+class InvoicePharmacyBill(models.Model):
+    bill = models.ForeignKey('PharmacyBill', on_delete=models.CASCADE, related_name='pharmacy_invoices')
+    patient = models.ForeignKey('PatientDetails', on_delete=models.CASCADE, related_name='pharmacy_invoices', null=True, blank=True)
+    date = models.DateTimeField(default=timezone.now)
+    payment_mode = models.CharField(max_length=50, blank=True, null=True)
+    paid_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    medical_items = models.JSONField(default=list)  # Store medicine details in JSON format
+
+    def __str__(self):
+        return f"Invoice #{self.id} - {self.patient_name}"
