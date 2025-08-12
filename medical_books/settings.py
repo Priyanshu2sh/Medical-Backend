@@ -61,6 +61,8 @@ INSTALLED_APPS = [
     'hospital_management',
 
     'corsheaders',
+    'channels',
+    'chatbot_ws',
 ]
 
 MIDDLEWARE = [
@@ -97,6 +99,7 @@ TEMPLATES = [
     },
 ]
 
+ASGI_APPLICATION = 'medical_books.asgi.application'
 WSGI_APPLICATION = 'medical_books.wsgi.application'
 
 
@@ -186,3 +189,9 @@ DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER')
 # }
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer", 
+    },
+}
