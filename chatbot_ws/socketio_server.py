@@ -1,53 +1,68 @@
-# socket_server.py
 import os
 import django
 import socketio
-import base64
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'medical_books.settings')
+# Set up Django settings so that you can import models if needed
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "medical_books.settings")
 django.setup()
 
-# Create Socket.IO server
-sio = socketio.AsyncServer(cors_allowed_origins='*', async_mode='asgi')
+# Create Socket.IO server (async mode for WebRTC signaling)
+sio = socketio.AsyncServer(
+    cors_allowed_origins="*",  # Allow any frontend origin (for local dev)
+    async_mode="asgi",
+    ping_interval=25,
+    ping_timeout=60,
+    logger=True,
+    engineio_logger=True
+)
 
-# Create ASGI app for Socket.IO
-socket_app = socketio.ASGIApp(sio)
+# ASGI app for Django + Socket.IO
+app = socketio.ASGIApp(sio)
 
-# ========= Socket.IO EVENTS =========
-
+# -----------------------------
+# SOCKET.IO EVENTS
+# -----------------------------
 @sio.event
 async def connect(sid, environ):
     print(f"🔌 Client connected: {sid}")
-    await sio.emit('server_message', {'type': 'connection', 'message': 'Connected successfully!'}, to=sid)
+    await sio.emit("server_message", {"message": "Connected to Socket.IO server"}, to=sid)
 
 @sio.event
 async def disconnect(sid):
     print(f"❌ Client disconnected: {sid}")
 
-@sio.event
-async def voice_data(sid, data):
-    """
-    Receives base64 encoded voice data from client,
-    decodes it, and sends back the original + decoded text.
-    """
-    voice_b64 = data.get("voice", "")
-
-    try:
-        decoded_bytes = base64.b64decode(voice_b64)
-        decoded_text = decoded_bytes.decode("utf-8", errors="ignore")
-    except Exception:
-        decoded_text = "[Error decoding base64]"
-
-    print(f"🎤 Received voice (base64 length {len(voice_b64)}), decoded text: {decoded_text}")
-
-    await sio.emit("server_message", {
-        "type": "voice_response",
-        "voice": voice_b64,
-        "text": decoded_text
-    }, to=sid)
-
+# Example chat message event
 @sio.event
 async def message(sid, data):
-    """Basic text echo"""
-    print(f"📩 Received: {data}")
-    await sio.emit('server_message', {'data': f"Echo: {data}"}, to=sid)
+    print(f"💬 Message from {sid}: {data}")
+    await sio.emit("message", data)  # broadcast to all clients
+
+# Example signaling event for WebRTC
+@sio.event
+async def signaling(sid, data):
+    """
+    Handles WebRTC signaling messages.
+    data = {
+        "to": "target_sid",
+        "type": "offer/answer/candidate",
+        "sdp": "...",
+        "candidate": {...}
+    }
+    """
+    print(f"📡 Signaling from {sid} to {data.get('to')}: {data}")
+    target_sid = data.get("to")
+    if target_sid:
+        await sio.emit("signaling", data, to=target_sid)
+
+# Room join for multiple peer WebRTC
+@sio.event
+async def join_room(sid, room):
+    sio.enter_room(sid, room)
+    print(f"🏠 {sid} joined room {room}")
+    await sio.emit("room_joined", {"sid": sid, "room": room}, to=room)
+
+@sio.event
+async def leave_room(sid, room):
+    sio.leave_room(sid, room)
+    print(f"🚪 {sid} left room {room}")
+    await sio.emit("room_left", {"sid": sid, "room": room}, to=room)
