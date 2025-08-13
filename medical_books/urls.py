@@ -29,6 +29,7 @@ urlpatterns = [
     path('api/egogram/', include('egogram.urls')),
     path('api/counsellor/', include('counsellor.urls')),
     path('api/hospital/', include('hospital_management.urls')),
+    path('api/', include('chatbot_ws.urls')),
        
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
