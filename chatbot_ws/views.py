@@ -8,20 +8,21 @@ from mistralai import Mistral
 
 # Load environment variables
 load_dotenv()
-MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 
-if not MISTRAL_API_KEY:
-    raise RuntimeError("Please set MISTRAL_API_KEY in your environment or .env file")
+MISTRAL_KEYS = os.getenv("MISTRAL_API_KEY", "").split(",")
 
-# Initialize Mistral client
-client = Mistral(api_key=MISTRAL_API_KEY)
+if not MISTRAL_KEYS or not MISTRAL_KEYS[0].strip():
+    st.error("Please set MISTRAL_KEYS in your .env file, separated by commas.")
+    st.stop()
+
+# Model selection
 MODEL = "mistral-medium-latest"
 
 # System prompt
 SYSTEM_PROMPT = {
     "role": "system",
     "content": (
-        "Your name is 'MindCare Assistant', a compassionate mental health chatbot "
+        "Your name is 'HSuite Assistant', a compassionate mental health chatbot "
         "developed by Prushal Technology Private Limited. "
         "You ONLY answer questions related to mental health, emotional well-being, "
         "coping strategies, mindfulness, therapy, and related topics. "
@@ -42,15 +43,25 @@ def detect_crisis(text):
     crisis_keywords = [r"\bsuicid", r"\bkill myself\b", r"\bwant to die\b", r"\bhurt myself\b"]
     return bool(re.search("|".join(crisis_keywords), text, flags=re.I))
 
-# Call Mistral API
+
+# Call Mistral API with key rotation
 def call_mistral(messages):
-    response = client.chat.complete(
-        model=MODEL,
-        messages=messages,
-        temperature=0.7,
-        max_tokens=512,
-    )
-    return response.choices[0].message.content
+    for api_key in MISTRAL_KEYS:
+        try:
+            client = Mistral(api_key=api_key.strip())
+            response = client.chat.complete(
+                model=MODEL,
+                messages=messages,
+                temperature=0.7,
+                max_tokens=512,
+            )
+            return response.choices[0].message.content  # Success → return
+        except SDKError as e:
+            if "capacity exceeded" in str(e).lower() or "rate limit" in str(e).lower():
+                continue  # Try next key
+            else:
+                raise e  # Other error → stop
+    return "⚠ All API keys are either expired or at capacity. Please try again later."
 
 @csrf_exempt
 def mindcare_chat(request):

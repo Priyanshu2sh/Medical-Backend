@@ -5,7 +5,8 @@ from rest_framework import status
 # from rest_framework.permissions import IsAuthenticated
 from accounts.models import User
 from .models import Books, Descriptions, History, SubDescriptions, CodeReaction
-from .serializers import BooksSerializer, DescriptionsSerializer, CodeReactionSerializer
+from .models import User
+from .serializers import BooksSerializer, DescriptionsSerializer, CodeReactionSerializer, DashboardStatsSerializer
 from django.db.models import F
 
 
@@ -380,3 +381,20 @@ class CodeReactionAPIView(APIView):
             "dislike_count": description.dislike_count,
             "reaction": reaction_status
         }, status=status.HTTP_200_OK)
+
+
+class DashboardStatsAPIView(APIView):
+
+    def get(self, request):
+        books_count = Books.objects.count()
+        codes_count = Descriptions.objects.count()
+        total_users_count = User.objects.count()
+        counsellors_count = User.objects.filter(role="Counsellor").count()
+
+        serializer = DashboardStatsSerializer({
+            "books_count": books_count,
+            "codes_count": codes_count,
+            "total_users_count": total_users_count,
+            "counsellors_count": counsellors_count
+        })
+        return Response(serializer.data)

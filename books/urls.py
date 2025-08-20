@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import BooksAPIView, BookDetailsAPIView,CodeReactionAPIView
+from .views import BooksAPIView, BookDetailsAPIView,CodeReactionAPIView, DashboardStatsAPIView
 
 urlpatterns = [
     path('', BooksAPIView.as_view()),
@@ -8,4 +8,6 @@ urlpatterns = [
     path('book-details/<int:user_id>/', BookDetailsAPIView.as_view()),
     path('book-details/delete/<int:code_id>', BookDetailsAPIView.as_view()),
     path('code-reaction/<int:user_id>/', CodeReactionAPIView.as_view()),
+
+    path('dashboard-stats/', DashboardStatsAPIView.as_view(), name='dashboard-stats'),
 ]

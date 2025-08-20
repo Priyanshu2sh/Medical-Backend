@@ -15,3 +15,11 @@ class CodeReactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = CodeReaction
         fields = '__all__'
+
+
+
+class DashboardStatsSerializer(serializers.Serializer):
+    books_count = serializers.IntegerField()
+    codes_count = serializers.IntegerField()
+    total_users_count = serializers.IntegerField()
+    counsellors_count = serializers.IntegerField()
