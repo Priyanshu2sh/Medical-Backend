@@ -11,9 +11,9 @@ load_dotenv()
 
 MISTRAL_KEYS = os.getenv("MISTRAL_API_KEY", "").split(",")
 
-if not MISTRAL_KEYS or not MISTRAL_KEYS[0].strip():
-    st.error("Please set MISTRAL_KEYS in your .env file, separated by commas.")
-    st.stop()
+# if not MISTRAL_KEYS or not MISTRAL_KEYS[0].strip():
+#     st.error("Please set MISTRAL_KEYS in your .env file, separated by commas.")
+#     st.stop()
 
 # Model selection
 MODEL = "mistral-medium-latest"

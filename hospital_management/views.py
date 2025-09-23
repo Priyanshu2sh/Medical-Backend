@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.utils import timezone
 from datetime import datetime
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, get_list_or_404
 from rest_framework import status as http_status
 from collections import Counter
 from django.utils import timezone
@@ -20,9 +20,9 @@ from decimal import Decimal
 from rest_framework import status
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.hashers import make_password
-from .models import Hospital, HMSUser, PatientDetails, Findings, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, ClinicalNotes, Medicine, Certificate, Attachments, OPD, PrescriptionItem, Prescription, BillPerticulars, Bill, Invoice, Bed, Ward, DoctorHistory, IPD, Supplier, PharmacyBill, PharmacyMedicine, StockTransaction, MedicineStock, PatientAppointment, DoctorTimetable, LabReport, BirthRecord, DeathReport, DoctorProfile, PharmacyOutBill, InvoicePharmacyBill, PharmacyOutInvoice
+from .models import DoctorsList, Hospital, HMSUser, HospitalContactUs, HospitalDynamicContent, HospitalJobOpenings, HospitalWhyChooseSection, OPDServiceData, OurSpecialities, PatientDetails, Findings, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, ClinicalNotes, Medicine, Certificate, Attachments, OPD, PrescriptionItem, Prescription, BillPerticulars, Bill, Invoice, Bed, Ward, DoctorHistory, IPD, Supplier, PharmacyBill, PharmacyMedicine, StockTransaction, MedicineStock, PatientAppointment, DoctorTimetable, LabReport, BirthRecord, DeathReport, DoctorProfile, PharmacyOutBill, InvoicePharmacyBill, PharmacyOutInvoice
 
-from .serializers import HospitalSerializer, HMSUserSerializer, PatientDetailsSerializer, FindingsSerializer, AllergiesSerializer, PatientFamilyHistorySerializer, PatientPastHospitalHistorySerializer, MedicalHistoryCurrentHospitalSerializer, DiseasesSerializer, OngoingMedicationSerializer, MedicineSerializer, ClinicalNotesSerializer, CertificateSerializer, AttachmentsSerializer, OPDSerializer, PrescriptionSerializer, PrescriptionItemSerializer, BillPerticularsSerializer, BillSerializer, InvoiceSerializer, WardSerializer, BedSerializer,IPDSerializer, SupplierSerializer, PharmacyBillSerializer, PharmacyMedicineSerializer, MedicineStockSerializer, StockTransactionSerializer, PatientRegisterSerializer, PatientAppointmentSerializer, AppointmentStatusUpdateSerializer, PatientAppointmentResponseSerializer, DoctorTimetableSerializer, LabReportSerializer, BirthRecordSerializer, DeathReportSerializer, DoctorProfileSerializer, PharmacyOutBillSerializer, InvoicePharmacyBillSerializer, PharmacyOutInvoiceSerializer
+from .serializers import DoctorsListSerializer, HospitalContactUsSerializer, HospitalDynamicContentSerializer, HospitalJobOpeningsSerializer, HospitalSerializer, HMSUserSerializer, HospitalWhyChooseSectionSerializer, OPDServiceContentSerializer, OurSpecialitiesSerializer, PatientDetailsSerializer, FindingsSerializer, AllergiesSerializer, PatientFamilyHistorySerializer, PatientPastHospitalHistorySerializer, MedicalHistoryCurrentHospitalSerializer, DiseasesSerializer, OngoingMedicationSerializer, MedicineSerializer, ClinicalNotesSerializer, CertificateSerializer, AttachmentsSerializer, OPDSerializer, PrescriptionSerializer, PrescriptionItemSerializer, BillPerticularsSerializer, BillSerializer, InvoiceSerializer, WardSerializer, BedSerializer,IPDSerializer, SupplierSerializer, PharmacyBillSerializer, PharmacyMedicineSerializer, MedicineStockSerializer, StockTransactionSerializer, PatientRegisterSerializer, PatientAppointmentSerializer, AppointmentStatusUpdateSerializer, PatientAppointmentResponseSerializer, DoctorTimetableSerializer, LabReportSerializer, BirthRecordSerializer, DeathReportSerializer, DoctorProfileSerializer, PharmacyOutBillSerializer, InvoicePharmacyBillSerializer, PharmacyOutInvoiceSerializer
 
 
 class HospitalCreateAPIView(APIView):
@@ -3688,3 +3688,163 @@ class GetAllPharmacyOutInvoicesView(APIView):
             "invoices": serializer.data,
             "hospital": HospitalSerializer(hospital).data
         }, status=status.HTTP_200_OK)
+
+
+class HospitalDynamicContentAPI(APIView):
+
+    def get(self, request, hospital_id):
+        profile = get_object_or_404(HospitalDynamicContent, hospital__hospital_id=hospital_id)
+        serializer = HospitalDynamicContentSerializer(profile)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, hospital_id):
+        try:
+            profile = HospitalDynamicContent.objects.get(hospital__hospital_id=hospital_id)
+            serializer = HospitalDynamicContentSerializer(profile, data=request.data, partial=True)
+        except HospitalDynamicContent.DoesNotExist:
+            serializer = HospitalDynamicContentSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save(hospital__hospital_id=hospital_id)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, hospital_id):
+        profile = get_object_or_404(HospitalDynamicContent, hospital__hospital_id=hospital_id)
+        serializer = HospitalDynamicContentSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save(hospital__hospital_id=hospital_id)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+class OPDServiceDataContentAPI(APIView):
+
+    def get(self, request, hospital_id):
+        profile = get_list_or_404(OPDServiceData, hospital__hospital_id=hospital_id)
+        serializer = OPDServiceContentSerializer(profile, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):    
+        serializer = OPDServiceContentSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request):
+        id = request.data.get('id')
+        profile = get_object_or_404(OPDServiceData, id=id)
+        serializer = OPDServiceContentSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class HospitalWhyChooseSectionAPI(APIView):
+
+    def get(self, request, hospital_id):
+        profile = get_list_or_404(HospitalWhyChooseSection, hospital__hospital_id=hospital_id)
+        serializer = HospitalWhyChooseSectionSerializer(profile, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = HospitalWhyChooseSectionSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request):
+        id = request.data.get('id')
+        profile = get_object_or_404(HospitalWhyChooseSection, id=id)
+        serializer = HospitalWhyChooseSectionSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class DoctorsListAPI(APIView):
+
+    def get(self, request, hospital_id):
+        profile = get_list_or_404(DoctorsList, hospital__hospital_id=hospital_id)
+        serializer = DoctorsListSerializer(profile, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = DoctorsListSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request):
+        id = request.data.get('id')
+        profile = get_object_or_404(DoctorsList, id=id)
+        serializer = DoctorsListSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OurSpecialitiesAPI(APIView):
+
+    def get(self, request, hospital_id):
+        profile = get_list_or_404(OurSpecialities, hospital__hospital_id=hospital_id)
+        serializer = OurSpecialitiesSerializer(profile, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = OurSpecialitiesSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request):
+        id = request.data.get('id')
+        profile = get_object_or_404(OurSpecialities, id=id)
+        serializer = OurSpecialitiesSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class HospitalContactUsAPI(APIView):
+
+    def get(self, request, hospital_id):
+        profile = get_list_or_404(HospitalContactUs, hospital__hospital_id=hospital_id)
+        serializer = HospitalContactUsSerializer(profile, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = HospitalContactUsSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class HospitalJobOpeningsAPI(APIView):
+
+    def get(self, request, hospital_id):
+        profile = get_list_or_404(HospitalJobOpenings, hospital__hospital_id=hospital_id)
+        serializer = HospitalJobOpeningsSerializer(profile, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        
+        serializer = HospitalJobOpeningsSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request):
+        id = request.data.get('id')
+        profile = get_object_or_404(HospitalJobOpenings, id=id)
+        serializer = HospitalJobOpeningsSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -1,14 +1,18 @@
-import random
+import random, jwt, ast
+from django.utils import timezone
 from django.shortcuts import render
+from medical_books import settings
 from rest_framework import status
 from accounts.models import User
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult, McqQuiz, McqQuestions, McqQuizResult, Steps, Feedback, Treatment
-from .serializers import CommonQuestionSerializer, CommonTestSerializer, UserResponseSerializer, StatementOptionSerializer, QuizNameSerializer, NewQuizSerializer, QuizResultSerializer, McqQuizSerializer, McqQuestionsSerializer,McqQuizResultSerializer, McqQuizSimpleSerializer, StepsSerializer, TreatmentSerializer  , FeedbackSerializer     
+from .models import CommonQuestion, CommonTest, MedicalHealthUser, StatementOption, QuizName, NewQuiz, QuizResult, McqQuiz, McqQuestions, McqQuizResult, Steps, Feedback, Treatment
+from .serializers import CommonQuestionSerializer, CommonTestSerializer, RegisterSerializer, UserResponseSerializer, StatementOptionSerializer, QuizNameSerializer, NewQuizSerializer, QuizResultSerializer, McqQuizSerializer, McqQuestionsSerializer,McqQuizResultSerializer, McqQuizSimpleSerializer, StepsSerializer, TreatmentSerializer  , FeedbackSerializer     
 from rest_framework.exceptions import NotFound
 from django.db.models import Count
 from egogram.models import Category
+from django.core.mail import send_mail
+from datetime import datetime, timedelta
 
 class QuizNameView(APIView):
     def get(self, request):
@@ -145,8 +149,8 @@ class QuizResultView(APIView):
             return Response({"error": "user_id is required"}, status=400)
 
         try:
-            user = User.objects.get(id=user_id)  # Fetch the User object
-        except User.DoesNotExist:
+            user = MedicalHealthUser.objects.get(id=user_id)  # Fetch the User object
+        except MedicalHealthUser.DoesNotExist:
             return Response({"error": "User not found"}, status=404)
 
         quiz_id = request.data.get('quiz_id')
@@ -218,7 +222,7 @@ class QuizResultHistoryView(APIView):
                 "quiz_history": result_serializer.data
             }, status=status.HTTP_200_OK)
 
-        except User.DoesNotExist:
+        except MedicalHealthUser.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
@@ -266,12 +270,6 @@ class CommonQuestionListView(APIView):
             formatted_questions.append(question_data)
 
         return Response({"questions": formatted_questions}, status=status.HTTP_200_OK)
-
-    # def get(self, request):
-    #     questions = CommonQuestion.objects.all()
-    #     serializer = CommonQuestionSerializer(questions, many=True)
-    #     return Response({"questions": serializer.data})
-    #     # Create your views here.
 
 
 class ComputeTestResultView(APIView):
@@ -351,7 +349,7 @@ class ComputeTestResultView(APIView):
 
         # Save the computed results to CommonTest model
         try:
-            user = User.objects.get(id=user_id) 
+            user = MedicalHealthUser.objects.get(id=user_id) 
             test_instance = CommonTest.objects.create(
                 user_id=user,
                 logical=category_counts["logical"],
@@ -373,7 +371,7 @@ class ComputeTestResultView(APIView):
                 "average_count": average_count,
                 "average_percentage": f"{average_percentage}%",
             }, status=status.HTTP_201_CREATED)
-        except User.DoesNotExist:
+        except MedicalHealthUser.DoesNotExist:
             return Response(
                 {"error": "User not found"},
                 status=status.HTTP_404_NOT_FOUND
@@ -435,7 +433,7 @@ class TestHistoryView(APIView):
                 "statement_options": statement_serializer.data
             }, status=status.HTTP_200_OK)
 
-        except User.DoesNotExist:
+        except MedicalHealthUser.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
@@ -614,10 +612,6 @@ class McqQuestionsByTypeView(APIView):
         questions = McqQuestions.objects.filter(type=type)
         serializer = McqQuestionsSerializer(questions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-     
-from django.contrib.auth import get_user_model
-User = get_user_model()
-import ast
 
 class McqQuizResultAPIView(APIView):
     def post(self, request):
@@ -627,8 +621,8 @@ class McqQuizResultAPIView(APIView):
         responses = data.get('response', [])
 
         try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
+            user = MedicalHealthUser.objects.get(id=user_id)
+        except MedicalHealthUser.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_400_BAD_REQUEST)
 
         total_questions = len(responses)
@@ -828,8 +822,8 @@ class TreatmentCreateView(APIView):
 
         # Fetch User
         try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
+            user = MedicalHealthUser.objects.get(id=user_id)
+        except MedicalHealthUser.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
         # Fetch Category
@@ -934,3 +928,198 @@ class UpdateCurrentStepAPIView(APIView):
             {"message": "Current step updated successfully."},
             status=status.HTTP_200_OK
         )
+
+class RegisterMedicalUser(APIView):
+
+    def post(self, request):
+        email = request.data.get('email')
+        first_name = request.data.get('first_name')
+        last_name = request.data.get('last_name')
+        username = request.data.get('username')
+        password = request.data.get('password')
+        try:
+            user=MedicalHealthUser.objects.get(email=email)
+            if user.verified_at is None:
+                if not first_name or not last_name or not password:
+                    return Response({
+                        "error": "All fields are required."
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                    
+                user.first_name = first_name
+                user.last_name = last_name
+                user.username = username
+                user.password = password
+                user.otp = random.randint(1000, 9999)
+                user.role = request.data.get('role')
+                user.save()
+                send_mail(
+                    subject='Verify OTP',
+                    message=f'Your OTP for verification is {user.otp}.',
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    fail_silently=False
+                )
+                return Response({
+                    "message": "OTP sent for verification.",
+                    "user_id": user.id
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    "message": "User already registered and verified, Please login.",
+                    "user_id": user.id
+                }, status=status.HTTP_200_OK)
+
+        except MedicalHealthUser.DoesNotExist:
+            serializer = RegisterSerializer(data=request.data)
+            if serializer.is_valid():
+                user = serializer.save()
+                user.otp = 1111
+                user.save()
+                send_mail(
+                    subject='Verify OTP',
+                    message=f'Your OTP for verification is {user.otp}.',
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    fail_silently=False
+                )
+                return Response({
+                    "message": "OTP sent for verification.",
+                    "user_id": user.id
+                }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def get(self, request):
+        all_users = MedicalHealthUser.objects.all()
+        response = []
+        for user in all_users:
+            response.append({
+                "id": user.id,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "username": user.username,
+                "email": user.email,
+                "role": user.role,
+                "status": user.status
+            })
+        return Response(response, status=status.HTTP_200_OK)
+
+class VerifyOTP(APIView):
+    def post(self, request):
+        user_id = request.data.get('user_id')
+        otp = request.data.get('otp')
+
+        try:
+            user = MedicalHealthUser.objects.get(id=user_id)
+            if int(user.otp) == otp:
+                user.verified_at = timezone.now()
+                user.save()
+                return Response({
+                    "message": "OTP verified successfully."
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    "error": "Invalid OTP."
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except MedicalHealthUser.DoesNotExist:
+            return Response({
+                "error": "User not found."
+            }, status=status.HTTP_404_NOT_FOUND)
+
+class Login(APIView):
+
+    def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+
+        try:
+            user = MedicalHealthUser.objects.get(email=email)
+            if user.status == 'Inactive':
+                return Response({
+                    "message": "Your account is inactive. Please contact admin."
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            if user.check_password(password):
+
+                # Generate JWT Token
+                payload = {
+                    'user_id': user.id,
+                    'email': user.email,
+                    'exp': datetime.utcnow() + timedelta(days=1),  # Token expires in 1 day
+                }
+                token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+
+                return Response({
+                    'message': 'Login successfully',
+                    'token': token,
+                    'user': {
+                        'id': user.id,
+                        'email': user.first_name,
+                        'first_name': user.first_name,
+                        'last_name': user.last_name,
+                        'username': user.username,
+                        'email': user.email,
+                        'role': user.role,
+                        'verified_at': user.verified_at,
+                        'status': user.status,
+                    }
+                }, status=status.HTTP_200_OK)
+
+            else:
+                return Response({
+                    "error": "Invalid password."
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except MedicalHealthUser.DoesNotExist:
+            return Response({
+                "error": "User not found."
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+
+class AddUserAPI(APIView):
+
+    def post(self, request):
+        # Extract data from request
+        first_name = request.data.get('first_name')
+        last_name = request.data.get('last_name')
+        username = request.data.get('username')
+        email = request.data.get('email')
+        password = request.data.get('password')
+        role = request.data.get('role')
+
+        existing_user = MedicalHealthUser.objects.filter(email=email).first()
+        if existing_user:
+            return Response({
+                "error": "User with this email already exists."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create a new user instance
+        new_user = MedicalHealthUser(
+            first_name=first_name,
+            last_name=last_name,
+            username=username,
+            email=email,
+            role=role,
+            verified_at=timezone.now(),  # Mark as verified
+        )
+        new_user.set_password(password)  # Hash the password
+        new_user.save()
+
+        return Response({
+            "message": "User added successfully.",
+            "user_id": new_user.id
+        }, status=status.HTTP_201_CREATED)
+    
+    def put(self, request):
+        user_id = request.data.get('user_id')
+        new_status = request.data.get('status')
+
+        try:
+            user = MedicalHealthUser.objects.get(id=user_id)
+            user.status = new_status
+            user.save()
+            return Response({
+                "message": "User status updated successfully."
+            }, status=status.HTTP_200_OK)
+        except MedicalHealthUser.DoesNotExist:
+            return Response({
+                "error": "User not found."
+            }, status=status.HTTP_404_NOT_FOUND)

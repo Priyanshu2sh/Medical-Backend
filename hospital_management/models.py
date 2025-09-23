@@ -90,7 +90,7 @@ class DoctorProfile(models.Model):
 
 
     def __str__(self):
-        return f"{self.doctor.full_name} - {self.specialization}"
+        return f"{self.doctor} - {self.specialization}"
 
 class Allergies(models.Model):
     hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, null=True, blank=True, related_name="allergies")
@@ -937,3 +937,106 @@ class InvoicePharmacyBill(models.Model):
 
     def __str__(self):
         return f"Invoice #{self.id} - {self.patient_name}"
+
+
+
+class HospitalDynamicContent(models.Model):
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE)
+    header_name = models.CharField(max_length=255)  # logo section hospital name
+    header_description = models.TextField(blank=True, null=True)
+    logo = models.ImageField(upload_to="hospital_logos/", blank=True, null=True)
+
+    # Homepage hero section
+    hero_name = models.CharField(max_length=255, blank=True, null=True)  
+    hero_description = models.TextField(blank=True, null=True)
+    image_1 = models.ImageField(upload_to="hospital_hero_images/", blank=True, null=True)
+    image_2 = models.ImageField(upload_to="hospital_hero_images/", blank=True, null=True)
+    image_3 = models.ImageField(upload_to="hospital_hero_images/", blank=True, null=True)
+
+    # Homepage main section
+    main_title = models.CharField(max_length=255, blank=True, null=True)
+    main_description = models.TextField(blank=True, null=True)
+    number_1 = models.IntegerField(blank=True, null=True)
+    label_1 = models.CharField(max_length=100, blank=True, null=True)
+    number_2 = models.IntegerField(blank=True, null=True)
+    label_2 = models.CharField(max_length=100, blank=True, null=True)
+    number_3 = models.IntegerField(blank=True, null=True)
+    label_3 = models.CharField(max_length=100, blank=True, null=True)
+    number_4 = models.IntegerField(blank=True, null=True)
+    label_4 = models.CharField(max_length=100, blank=True, null=True)
+    main_section_img = models.ImageField(upload_to="hospital_main_images/", blank=True, null=True)
+
+    # colors
+    title_color = models.CharField(max_length=7, blank=True, null=True)
+    theme_color_1 = models.CharField(max_length=7, blank=True, null=True)
+    theme_color_2 = models.CharField(max_length=7, blank=True, null=True)
+
+    #contact information
+    phone = models.CharField(max_length=100, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.hospital} - {self.header_name}"
+
+class OPDServiceData(models.Model):
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name='opd_services_data')
+    service = models.CharField(max_length=255)
+    description = models.TextField()
+    emoji = models.FileField(upload_to="hospital_opd_emoji/", blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.hospital} - {self.service}"
+
+
+class HospitalWhyChooseSection(models.Model):
+    hospital = models.ForeignKey("Hospital", on_delete=models.CASCADE)
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+
+    def __str__(self):
+        return f"{self.hospital} - {self.title}"
+
+class DoctorsList(models.Model):
+    hospital = models.ForeignKey("Hospital", on_delete=models.CASCADE)
+    doctor_name = models.CharField(max_length=255)
+    specialization = models.CharField(max_length=255)
+    description = models.TextField()
+    profile_img = models.ImageField(upload_to="hospital_doctor_img/", blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.hospital} - {self.doctor_name} - {self.specialization}"
+    
+class OurSpecialities(models.Model):
+    hospital = models.ForeignKey("Hospital", on_delete=models.CASCADE)
+    specialization = models.CharField(max_length=255)
+    description = models.TextField()
+
+    def __str__(self):
+        return f"{self.hospital} - {self.specialization}"
+
+class HospitalContactUs(models.Model):
+    hospital = models.ForeignKey("Hospital", on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    message = models.TextField()
+    date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.hospital} - {self.email} - Contact Us"
+
+
+class HospitalJobOpenings(models.Model):
+    STATUS_CHOICES = [
+        ("Open", "Open"),
+        ("Closed", "Closed")
+    ]
+
+    hospital = models.ForeignKey("Hospital", on_delete=models.CASCADE)
+    job_name = models.CharField(max_length=255)
+    department = models.CharField(max_length=255)
+    location = models.CharField(max_length=255)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="open")
+
+    def __str__(self):
+        return f"{self.hospital} - {self.job_name}"

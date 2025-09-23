@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult,McqQuiz, McqQuestions, McqQuizResult
+from .models import MedicalHealthUser, CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult,McqQuiz, McqQuestions, McqQuizResult
 
 # Register your models here.
 admin.site.register(CommonQuestion)
@@ -42,3 +42,4 @@ class QuizResultAdmin(admin.ModelAdmin):
     search_fields = ('user_id__username', 'quiz__name')
     list_filter = ('quiz', 'score')
    
+admin.site.register(MedicalHealthUser)

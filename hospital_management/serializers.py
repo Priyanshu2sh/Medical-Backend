@@ -1,8 +1,10 @@
+import base64, uuid
+from django.core.files.base import ContentFile
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 import random
 from datetime import date
-from .models import Hospital, PatientDetails, Findings, HMSUser, Allergies, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, Medicine, ClinicalNotes, Certificate, Attachments, OPD, PrescriptionItem, Prescription, BillPerticulars, Bill, Invoice, Bed, Ward, IPD, DoctorHistory, Supplier, PharmacyBill, PharmacyMedicine, MedicineStock, StockTransaction, PatientAppointment, DoctorTimetable, LabReport, DeathReport, BirthRecord, DoctorProfile, PharmacyOutBill, InvoicePharmacyBill, PharmacyOutInvoice
+from .models import DoctorsList, Hospital, HospitalContactUs, HospitalDynamicContent, HospitalJobOpenings, HospitalWhyChooseSection, OPDServiceData, OurSpecialities, PatientDetails, Findings, HMSUser, Allergies, PatientFamilyHistory, PatientPastHospitalHistory, MedicalHistoryCurrentHospital, Diseases, OngoingMedication, Medicine, ClinicalNotes, Certificate, Attachments, OPD, PrescriptionItem, Prescription, BillPerticulars, Bill, Invoice, Bed, Ward, IPD, DoctorHistory, Supplier, PharmacyBill, PharmacyMedicine, MedicineStock, StockTransaction, PatientAppointment, DoctorTimetable, LabReport, DeathReport, BirthRecord, DoctorProfile, PharmacyOutBill, InvoicePharmacyBill, PharmacyOutInvoice
 
 
 class HospitalSerializer(serializers.ModelSerializer):
@@ -441,7 +443,14 @@ class BirthRecordSerializer(serializers.ModelSerializer):
         fields = '__all__'
         
 class DeathReportSerializer(serializers.ModelSerializer):
+    # This will show patient details in GET
     patient = PatientDetailsSerializer(read_only=True)
+
+    # This will accept patient id in POST/PUT
+    patient_id = serializers.PrimaryKeyRelatedField(
+        queryset=PatientDetails.objects.all(), write_only=True, source="patient"
+    )
+    
     class Meta:
         model = DeathReport
         fields = '__all__'
@@ -476,3 +485,139 @@ class InvoicePharmacyBillSerializer(serializers.ModelSerializer):
         model = InvoicePharmacyBill
         # fields = "__all__"
         fields = ['id', 'patient', 'bill', 'date', 'payment_mode', 'paid_amount', 'medical_items']
+
+
+class Base64FileField(serializers.FileField):
+    """
+    A Django REST framework field for handling file uploads through raw post data.
+    It handles base64-encoded files.
+    """
+
+    def to_internal_value(self, data):
+        # Check if this is a base64 string
+        if isinstance(data, str) and data.startswith("data:"):
+            # Format: data:<mime>;base64,<data>
+            format, file_str = data.split(';base64,')  
+            ext = format.split('/')[-1]  # file extension from mime type
+
+            # Generate file name
+            file_name = str(uuid.uuid4())[:12]  # 12 characters are enough
+            complete_file_name = f"{file_name}.{ext}"
+
+            # Decode file
+            decoded_file = base64.b64decode(file_str)
+
+            data = ContentFile(decoded_file, name=complete_file_name)
+
+        return super().to_internal_value(data)
+
+
+
+class HospitalDynamicContentSerializer(serializers.ModelSerializer):
+    logo = Base64FileField(max_length=None, use_url=True, required=False)
+    image_1 = Base64FileField(max_length=None, use_url=True, required=False)
+    image_2 = Base64FileField(max_length=None, use_url=True, required=False)
+    image_3 = Base64FileField(max_length=None, use_url=True, required=False)
+    main_section_img = Base64FileField(max_length=None, use_url=True, required=False)
+
+    class Meta:
+        model = HospitalDynamicContent
+        fields = [
+            'hospital',
+            'header_name', 'header_description', 'logo',
+            'hero_name', 'hero_description',
+            'image_1', 'image_2', 'image_3',
+            'main_title', 'main_description', 'number_1', 'label_1', 'number_2', 'label_2', 'number_3', 'label_3', 'number_4', 'label_4', 'main_section_img',
+            'title_color', 'theme_color_1', 'theme_color_2',
+            'phone', 'email', 'address'
+        ]
+        extra_kwargs = {
+            'hospital': {'required': True}  # only hospital is mandatory
+        }
+
+
+class OPDServiceContentSerializer(serializers.ModelSerializer):
+    emoji = Base64FileField(max_length=None, use_url=True, required=False)
+
+    class Meta:
+        model = OPDServiceData
+        fields = [
+            'id',
+            'hospital',
+            'service', 'description', 'emoji'
+        ]
+        extra_kwargs = {
+            'hospital': {'required': True}  # only hospital is mandatory
+        }
+
+class HospitalWhyChooseSectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HospitalWhyChooseSection
+        fields = [
+            'id',
+            'hospital',
+            'title', 'description'
+        ]
+        extra_kwargs = {
+            'hospital': {'required': True}  # only hospital is mandatory
+        }
+
+class DoctorsListSerializer(serializers.ModelSerializer):
+    profile_img = Base64FileField(max_length=None, use_url=True, required=False)
+
+    class Meta:
+        model = DoctorsList
+        fields = [
+            'id',
+            'hospital',
+            'doctor_name',
+            'specialization',
+            'description',
+            'profile_img'
+        ]
+        extra_kwargs = {
+            'hospital': {'required': True}  # only hospital is mandatory
+        }
+
+class OurSpecialitiesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OurSpecialities
+        fields = [
+            'id',
+            'hospital',
+            'specialization',
+            'description',
+        ]
+        extra_kwargs = {
+            'hospital': {'required': True}  # only hospital is mandatory
+        }
+
+class HospitalContactUsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HospitalContactUs
+        fields = [
+            'id',
+            'hospital',
+            'name',
+            'email',
+            'message',
+            'date'
+        ]
+        extra_kwargs = {
+            'hospital': {'required': True}  # only hospital is mandatory
+        }
+
+class HospitalJobOpeningsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HospitalJobOpenings
+        fields = [
+            'id',
+            'hospital',
+            'job_name',
+            'department',
+            'location',
+            'status'
+        ]
+        extra_kwargs = {
+            'hospital': {'required': True}  # only hospital is mandatory
+        }

@@ -1,7 +1,8 @@
+from assessments.models import MedicalHealthUser
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import EgogramTest, Category, EgogramStatement, ResultHistory, User
+from .models import EgogramTest, Category, EgogramStatement, ResultHistory
 import random
 from collections import defaultdict
 from .serializers import EgogramTestSerializer, CategorySerializer, EgogramStatementSerializer, ResultHistorySerializer
@@ -254,8 +255,8 @@ class EgogramResultView(APIView):
 
             # Validate user
             try:
-                user = User.objects.get(id=user_id)
-            except User.DoesNotExist:
+                user = MedicalHealthUser.objects.get(id=user_id)
+            except MedicalHealthUser.DoesNotExist:
                 return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
             # Category-wise score calculation

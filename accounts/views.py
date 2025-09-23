@@ -20,7 +20,7 @@ from .utils import generate_password_reset_token
 from rest_framework_simplejwt.tokens import UntypedToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework.exceptions import NotAuthenticated
-
+from assessments.models import MedicalHealthUser
 
 
 # Create your views here.
@@ -188,13 +188,13 @@ class CompleteCounsellorProfile(APIView):
     def post(self, request):
         # Validate user_id exists
         try:
-            user = User.objects.get(pk=request.data.get('user_id'))
+            user = MedicalHealthUser.objects.get(pk=request.data.get('user_id'))
             if user.role != "Counsellor":
                 return Response(
                     {"error": "Only users with counsellor role can create profiles"},
                     status=status.HTTP_403_FORBIDDEN
                 )
-        except User.DoesNotExist:
+        except MedicalHealthUser.DoesNotExist:
             return Response(
                 {"error": "User not found"},
                 status=status.HTTP_404_NOT_FOUND
@@ -223,10 +223,10 @@ class UpdateCounsellorProfile(APIView):
 
     def put(self, request, user_id):
         try:
-            user = User.objects.get(pk=user_id)
+            user = MedicalHealthUser.objects.get(pk=user_id)
             if not hasattr(user, 'counsellor_profile'):
                 return Response({"error": "Profile does not exist"}, status=404)
-        except User.DoesNotExist:
+        except MedicalHealthUser.DoesNotExist:
             return Response({"error": "User not found"}, status=404)
 
         profile = user.counsellor_profile

@@ -1,6 +1,7 @@
+from assessments.models import MedicalHealthUser
 from rest_framework import serializers
 from .models import CounsellorRequest,TherapySteps, Precaution,Feedback
-from accounts.models import User, CounsellorProfile
+from accounts.models import CounsellorProfile
 class CounsellorProfileSerializer(serializers.ModelSerializer):
     counsellor_id = serializers.IntegerField(source='user.id', read_only=True)
     class Meta:
@@ -19,7 +20,7 @@ class CounsellorListSerializer(serializers.ModelSerializer):
     profile = CounsellorProfileSerializer(source='counsellor_profile')
     
     class Meta:
-        model = User
+        model = MedicalHealthUser
         fields = [
             'id',
             'username',
@@ -42,7 +43,7 @@ class CounsellorRequestSerializer(serializers.ModelSerializer):
         }
 
     def validate_user_id(self, value):
-        if not User.objects.filter(pk=value).exists():
+        if not MedicalHealthUser.objects.filter(pk=value).exists():
             raise serializers.ValidationError("User does not exist")
         return value
 

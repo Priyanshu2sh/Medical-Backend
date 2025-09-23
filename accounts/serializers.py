@@ -1,3 +1,4 @@
+from assessments.models import MedicalHealthUser
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 from .models import User, CounsellorProfile  
@@ -54,13 +55,13 @@ class CounsellorProfileSerializer(serializers.ModelSerializer):
         }
 
     def validate_user_id(self, value):
-        if not User.objects.filter(pk=value, role="Counsellor").exists():
+        if not MedicalHealthUser.objects.filter(pk=value, role="Counsellor").exists():
             raise serializers.ValidationError("User is not a counsellor")
         return value
     
     def create(self, validated_data):
         user_id = validated_data.pop('user_id')
-        user = User.objects.get(pk=user_id)
+        user = MedicalHealthUser.objects.get(pk=user_id)
         profile = CounsellorProfile.objects.create(user=user, **validated_data)
         return profile
 

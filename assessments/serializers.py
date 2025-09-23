@@ -1,6 +1,27 @@
 from rest_framework import serializers
 from egogram.models import Category
-from .models import CommonQuestion, CommonTest, StatementOption, QuizName, NewQuiz, QuizResult, McqQuiz, McqQuestions, McqQuizResult, Steps, Treatment, Feedback
+from .models import CommonQuestion, CommonTest, MedicalHealthUser, StatementOption, QuizName, NewQuiz, QuizResult, McqQuiz, McqQuestions, McqQuizResult, Steps, Treatment, Feedback
+
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True, min_length=6)
+    role = serializers.CharField(required=True)
+
+    class Meta:
+        model = MedicalHealthUser
+        fields = ['first_name', 'last_name', 'username', 'email', 'password', "role"]
+
+    def create(self, validated_data):
+        user = MedicalHealthUser(
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name'],
+            username=validated_data['username'],
+            email=validated_data['email'],
+            role=validated_data['role'],
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+        return user
+
 
 class CommonQuestionSerializer(serializers.ModelSerializer):
     class Meta:

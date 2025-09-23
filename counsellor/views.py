@@ -1,9 +1,9 @@
+from assessments.models import MedicalHealthUser
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from .models import CounsellorRequest,TherapySteps,Precaution,Feedback
-from accounts.models import User
 from .serializers import CounsellorRequestSerializer, CounsellorListSerializer,PrecautionSerializer,TherapyStepsSerializer,FeedbackSerializer
 from rest_framework.exceptions import NotFound
 from django.shortcuts import get_object_or_404
@@ -34,27 +34,27 @@ class CreateSessionAPI(APIView):
 
 class CounsellorListView(APIView):
     def get(self, request):
-        counsellors = User.objects.filter(role='Counsellor').select_related('counsellor_profile')
+        counsellors = MedicalHealthUser.objects.filter(role='Counsellor').select_related('counsellor_profile')
         serializer = CounsellorListSerializer(counsellors, many=True)
         return Response(serializer.data)
     
 class CounsellorByCounsellorIdView(APIView):
     def get(self, request, counsellor_id):
         try:
-            counsellor = User.objects.filter(
+            counsellor = MedicalHealthUser.objects.filter(
                 role='Counsellor'
             ).select_related('counsellor_profile').get(pk=counsellor_id)
             serializer = CounsellorListSerializer(counsellor)
             return Response(serializer.data)
-        except User.DoesNotExist:
+        except MedicalHealthUser.DoesNotExist:
             raise NotFound("Counsellor not found")
         
 
 class CounsellingRequestsByUserId(APIView):
     def get(self, request, user_id):
         # Optional: validate if the user exists
-        if not User.objects.filter(id=user_id).exists():
-            return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        if not MedicalHealthUser.objects.filter(id=user_id).exists():
+            return Response({'detail': 'MedicalHealthUser not found'}, status=status.HTTP_404_NOT_FOUND)
 
         sessions = CounsellorRequest.objects.filter(user_id=user_id)
         serializer = CounsellorRequestSerializer(sessions, many=True)
@@ -63,7 +63,7 @@ class CounsellingRequestsByUserId(APIView):
 
 class CounsellingRequestsByCounsellorId(APIView):
     def get(self, request, counsellor_id):
-        if not User.objects.filter(id=counsellor_id, role='Counsellor').exists():
+        if not MedicalHealthUser.objects.filter(id=counsellor_id, role='Counsellor').exists():
             return Response({'detail': 'Counsellor not found'}, status=status.HTTP_404_NOT_FOUND)
 
         sessions = CounsellorRequest.objects.filter(counsellor_id=counsellor_id)

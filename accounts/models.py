@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.validators import RegexValidator
 from django.utils.timezone import now
 from django.contrib.auth.hashers import make_password
+from assessments.models import MedicalHealthUser
 
 # Create your models here.
 class UserManager(BaseUserManager):
@@ -83,7 +84,7 @@ def get_default_user():
 
 class CounsellorProfile(models.Model):
     user = models.OneToOneField(
-        User, 
+        MedicalHealthUser, 
         on_delete=models.CASCADE,
         related_name='counsellor_profile',
         primary_key=True,

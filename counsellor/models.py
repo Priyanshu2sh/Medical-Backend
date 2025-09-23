@@ -1,5 +1,5 @@
 from django.db import models
-from accounts.models import User
+from assessments.models import MedicalHealthUser
 
 
 # Create your models here.
@@ -11,12 +11,12 @@ class CounsellorRequest(models.Model):
     ]
 
     user = models.ForeignKey(
-        User, 
+        MedicalHealthUser, 
         on_delete=models.CASCADE,
         related_name='client_sessions',
     )
     counsellor = models.ForeignKey(
-        User,  # Not CounsellorProfile!
+        MedicalHealthUser,  # Not CounsellorProfile!
         on_delete=models.CASCADE,
         related_name='counsellor_sessions',
         limit_choices_to={'role': 'Counsellor'},  # Ensures only counsellors can be selected
@@ -64,13 +64,13 @@ class TherapySteps(models.Model):
         blank=True
     )
     counsellor = models.ForeignKey(
-        User,
+        MedicalHealthUser,
         on_delete=models.CASCADE,
         related_name='therapy_given',
         limit_choices_to={'role': 'Counsellor'}
     )
     user = models.ForeignKey(
-        User,
+        MedicalHealthUser,
         on_delete=models.CASCADE,
         related_name='therapy_received'
     )
@@ -115,7 +115,7 @@ class Feedback(models.Model):
         related_name='feedbacks'
     )
     user = models.ForeignKey(
-        User,
+        MedicalHealthUser,
         on_delete=models.CASCADE,
         related_name='feedbacks'
     )

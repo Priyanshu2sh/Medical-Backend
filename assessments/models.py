@@ -1,6 +1,43 @@
 from django.db import models
-from accounts.models import User  
 from egogram.models import Category  # Import the Category model  
+from django.contrib.auth.hashers import make_password, check_password
+
+class MedicalHealthUser(models.Model):
+    role_choices = [
+        ("user", "user"),
+        ("Counsellor", "Counsellor"),
+        ("admin", "admin")
+    ]
+
+    status_choices = [
+        ("Active", "Active"),
+        ("Inactive", "Inactive"),
+    ]
+
+    first_name = models.CharField(max_length=30)
+    last_name = models.CharField(max_length=30)
+    username = models.CharField(max_length=30)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=255)  # store hashed password
+    role = models.CharField(max_length=20, choices=role_choices, default="user")
+    otp = models.CharField(max_length=6, blank=True, null=True)
+    verified_at = models.DateTimeField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=status_choices, default="Active")
+
+    def set_password(self, raw_password):
+        self.password = make_password(raw_password)
+
+    def check_password(self, raw_password):
+        return check_password(raw_password, self.password)
+
+    def save(self, *args, **kwargs):
+        # If password is not already hashed, hash it before saving
+        if not self.password.startswith('pbkdf2_'):  # simple check for hashed pw prefix
+            self.password = make_password(self.password)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.email
 
 class CommonQuestion(models.Model):
     # id = models.AutoField(primary_key=True)
@@ -27,13 +64,13 @@ class CommonTest(models.Model):
     skip = models.IntegerField()
     total = models.IntegerField()   
     result = models.CharField(max_length=100, blank=True, null=True)   
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE)
+    user_id = models.ForeignKey(MedicalHealthUser, on_delete=models.CASCADE)
     type = models.CharField(max_length=20, choices=TEST_TYPES, default="mcq")  
     created_at = models.DateTimeField(auto_now_add=True)  # Stores creation timestamp
     updated_at = models.DateTimeField(auto_now=True) 
 
     def __str__(self):
-        return str(self.user)
+        return str(self.user_id)
 
 class StatementOption(models.Model):
     logical = models.CharField(max_length=255)
@@ -77,7 +114,7 @@ class NewQuiz(models.Model):
     
 
 class QuizResult(models.Model):
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    user_id = models.ForeignKey(MedicalHealthUser, on_delete=models.CASCADE, null=True, blank=True)
     quiz = models.ForeignKey(QuizName, on_delete=models.CASCADE)
     cat_1_marks = models.IntegerField(default=0, null=True, blank=True)
     cat_2_marks = models.IntegerField(default=0 ,null=True, blank=True)
@@ -88,8 +125,8 @@ class QuizResult(models.Model):
     date_taken = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.user.username} - {self.quiz.quiz_name} - {self.score}"
-    
+        return f"{self.user_id.first_name} - {self.quiz.quiz_name} - {self.score}"
+
 
 #MCQ based
 class McqQuiz(models.Model):
@@ -147,7 +184,7 @@ class McqQuestions(models.Model):
 
 
 class McqQuizResult(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(MedicalHealthUser, on_delete=models.CASCADE)
     quiz = models.ForeignKey(McqQuiz, on_delete=models.CASCADE)
     score = models.PositiveIntegerField()
     total_questions = models.PositiveIntegerField()
@@ -157,7 +194,7 @@ class McqQuizResult(models.Model):
     submitted_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.user.username} - {self.quiz.name} - {self.score}/{self.total_questions}"
+        return f"{self.user.first_name} - {self.quiz.name} - {self.score}/{self.total_questions}"
     
 
 
@@ -201,7 +238,7 @@ class Treatment(models.Model):
         related_name="treatments"
     )
     user = models.ForeignKey(
-        User,
+        MedicalHealthUser,
         on_delete=models.CASCADE,
         related_name="treatments"
     )
@@ -235,7 +272,7 @@ class Treatment(models.Model):
 
 class Feedback(models.Model):
     treatment = models.ForeignKey(Treatment, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(MedicalHealthUser, on_delete=models.CASCADE)
     description = models.JSONField()          # Django ≥3.1
 
     created_at = models.DateTimeField(auto_now_add=True)

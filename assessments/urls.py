@@ -1,7 +1,14 @@
 from django.urls import path
-from .views import CommonQuestionListView, ComputeTestResultView, StatementOptionView, TestHistoryView, QuizNameView, NewQuizView, QuizResultView, QuizResultHistoryView, TestQuizNameView, QuizAllQuestionView, QuizByTypeView, McqQuizCreateView, McqQuestionCreateView,  McqQuestionsByQuizForTestView, McqQuestionsByQuizIdView,McqQuestionsByTypeView, McqQuizBytypeView,McqQuizResultAPIView, McqQuizResultHistoryView, TestMcqQuizView, CreateStepsView, GetAllStepsView, TreatmentCreateView, FeedbackView, TreatmentDetailByUser,UpdateCurrentStepAPIView, GetStepByStepIdView
+from .views import RegisterMedicalUser, VerifyOTP, Login, AddUserAPI, CommonQuestionListView, ComputeTestResultView, StatementOptionView, TestHistoryView, QuizNameView, NewQuizView, QuizResultView, QuizResultHistoryView, TestQuizNameView, QuizAllQuestionView, QuizByTypeView, McqQuizCreateView, McqQuestionCreateView,  McqQuestionsByQuizForTestView, McqQuestionsByQuizIdView,McqQuestionsByTypeView, McqQuizBytypeView,McqQuizResultAPIView, McqQuizResultHistoryView, TestMcqQuizView, CreateStepsView, GetAllStepsView, TreatmentCreateView, FeedbackView, TreatmentDetailByUser,UpdateCurrentStepAPIView, GetStepByStepIdView
 
 urlpatterns = [
+    # login & registration
+    path('register-medical/', RegisterMedicalUser.as_view()),
+    path('verify-otp/', VerifyOTP.as_view()),
+    path('login/', Login.as_view()),
+    path('add-user/', AddUserAPI.as_view()),
+    path('update-status/', AddUserAPI.as_view()),
+
     path('question_add', CommonQuestionListView.as_view()),
     path('questions/get/',CommonQuestionListView.as_view()),
     
