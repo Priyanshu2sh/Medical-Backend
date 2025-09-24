@@ -3848,3 +3848,16 @@ class HospitalJobOpeningsAPI(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class GetHospitalIdAPI(APIView):
+
+    def post(self, request):
+        hospital_name = request.data.get('hospital_name')
+        try:
+            hospital = Hospital.objects.get(name=hospital_name)
+            return Response({
+                "message": "Hospital ID found",
+                "hospital_id": hospital.hospital_id
+            }, status=status.HTTP_200_OK)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid Hospital Name"}, status=status.HTTP_404_NOT_FOUND)
