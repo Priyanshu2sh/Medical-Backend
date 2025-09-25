@@ -2693,9 +2693,10 @@ class UpdatePharmacyBillPaymentView(APIView):
 
         # Already paid?
         if bill.payment_status == "paid":
-            return Response({"error": "Payment is already marked as paid and cannot be changed.."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Payment is already marked as paid and cannot be changed."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Get payment mode from request
+        # Get payment info from request
+        discount = float(request.data.get("discount", 0))  # % discount
         payment_mode = request.data.get("payment_mode")
         payment_status = request.data.get("payment_status")
         patient_id = request.data.get("patient_id")
@@ -2711,41 +2712,37 @@ class UpdatePharmacyBillPaymentView(APIView):
             except PatientDetails.DoesNotExist:
                 return Response({"error": "Patient not found in this hospital."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Update fields
+        # ✅ Apply discount to total bill
+        original_total = bill.total_amount
+        discount_amount = (original_total * discount) / 100
+        final_amount = original_total - discount_amount
+
+        # ✅ Update bill fields
         bill.payment_status = payment_status
         bill.payment_mode = payment_mode
         bill.payment_date = timezone.now()
+        bill.discount_percentage = discount  # (optional: if you have this field)
+        bill.discount_amount = discount_amount  # (optional: if you have this field)
+        bill.final_amount = final_amount  # (optional: create this field if not exists)
         bill.save()
 
-         # Create Invoice
+        # ✅ Create Invoice with discounted amount
         invoice = InvoicePharmacyBill.objects.create(
             bill=bill,
             patient=bill.patient,
             payment_mode=payment_mode,
-            paid_amount=bill.total_amount,
+            paid_amount=final_amount,  # discounted total
             medical_items=bill.medical_items
         )
 
         serializer = PharmacyBillSerializer(bill)
         return Response({
-            "message": "Pharmacy bill payment updated and invoice generated successfully.",
+            "message": "Pharmacy bill payment updated with discount and invoice generated successfully.",
             "data": serializer.data,
             "invoice": InvoicePharmacyBillSerializer(invoice).data,
-            # "invoice":
-            # {
-            #     "id": invoice.id,
-            #     "bill": bill.id,
-            #     "patient": {
-            #         "id": patient.id if patient else None,
-            #         "name": patient.full_name
-            #     },
-            #     "paid_amount": invoice.paid_amount,
-            #     "payment_mode": invoice.payment_mode,
-            #     "date": invoice.date,
-            #     "medical_items": invoice.medical_items
-            # },
             "hospital": HospitalSerializer(hospital).data
         }, status=status.HTTP_200_OK)
+
 
 # get invoice with pharmacy bill 
 class PharmacyInvoiceListView(APIView):
@@ -3369,6 +3366,32 @@ class LabReportsByLabAssistantAPIView(APIView):
         serializer = LabReportSerializer(lab_reports, many=True)
 
         return Response({"lab_reports": serializer.data}, status=http_status.HTTP_200_OK)
+    
+class LabReportsByPatientIdView(APIView):
+    def get(self, request, patient_id):
+        hospital_id = request.headers.get("hospital_id")
+        if not hospital_id:
+            return Response({"error": "Hospital ID is required in headers."}, status=http_status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hospital = Hospital.objects.get(hospital_id=hospital_id)
+        except Hospital.DoesNotExist:
+            return Response({"error": "Invalid hospital ID."}, status=http_status.HTTP_404_NOT_FOUND)
+
+        try:
+            patient = PatientDetails.objects.get(id=patient_id, hospital=hospital)
+        except PatientDetails.DoesNotExist:
+            return Response({"error": "Patient not found in this hospital."}, status=http_status.HTTP_404_NOT_FOUND)
+
+        lab_reports = LabReport.objects.filter(patient=patient, hospital=hospital)
+        serializer = LabReportSerializer(lab_reports, many=True)
+
+        return Response({
+            "message": "Lab reports fetched successfully.",
+            "count": lab_reports.count(),
+            "lab_reports": serializer.data,
+            "hospital": HospitalSerializer(hospital).data
+        }, status=http_status.HTTP_200_OK)
 
 class LabReportDeleteAPIView(APIView):
     def delete(self, request, report_id):
@@ -3853,6 +3876,7 @@ class GetHospitalIdAPI(APIView):
 
     def post(self, request):
         hospital_name = request.data.get('hospital_name')
+        # print(hospital_name)
         try:
             hospital = Hospital.objects.get(name=hospital_name)
             return Response({

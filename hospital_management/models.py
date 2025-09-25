@@ -702,7 +702,9 @@ class PharmacyBill(models.Model):
 
     medical_items = models.JSONField(null=True, blank=True)  
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-
+    discount_percentage = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    final_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     payment_status = models.CharField(max_length=10, choices=PAYMENT_STATUS_CHOICES, default='unpaid')
     payment_mode = models.CharField(max_length=20, choices=PAYMENT_MODE_CHOICES, null=True, blank=True)
     payment_date = models.DateTimeField(null=True, blank=True)
